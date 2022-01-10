@@ -1,0 +1,158 @@
+# Variable declaration
+max_size: 3
+max_size i32: 3
+cli: import "cli"
+http: import "net/http"
+
+# Function declaration (preferred)
+# capitalized variables / functions are exported
+λ SomeFunction (a i32, b i32) (i32, i32) {
+	# ..
+}
+
+# which is equivalent to
+SomeFunction: λ (a i32, b i32) (i32, i32) {
+	# ..
+}
+
+# If else expressions
+3 = 3 ⇒ 10 ~ 20
+
+a: "hello"
+a = "hello" ⇒ {
+	doSomething
+	print "A"
+	10
+} ~ {
+	doSomethingElse
+	print "B"
+	"A"
+}
+
+# For statements
+template: "hello @"
+∀ (i, c) ∈ template → print c
+
+# for based on int ranges
+∀ i ∈ range[0‥10) → print i
+∀ i ∈ range[0‥9]  → print i
+∀ i ∈ range(-1‥9] → print i
+
+# one clause loop i: 0
+∀ i < 10 → {
+	# ...
+	i: i+1
+}
+
+# two clause loop
+i: 0
+∀ i<10; i:i+1 → {
+	# ...
+}
+
+# three clause loop
+∀ i: 0; i<10; i: i+1 → {
+	# ...
+}
+
+# Parametrized functions
+λ max [T type] (a T, b T) T {
+	a > b ⇒ a ~ b
+}
+
+h: max[i32]
+max[i32]
+max[string]
+
+λ printf [template string] (‥args interface()) {
+	σ start: 0
+	σ nextArg: 0
+	∀ (i, c) ∈ template → {
+		c = '@' ⇒ {
+			start < i ⇒ print template[start‥i]
+			print args[nextArg]
+			start: i + 1
+		}
+	}
+	start < len template ⇒ print template[start‥i]
+}
+
+printf["Hello @"] 12
+{
+	print "Hello "
+	print arg1
+}
+Hello 12
+
+# Struct declaration
+exampleStruct: struct (
+	A i32,
+	B i32,
+	C λ (i32) i32,
+	D λ (i32) (i32, string),
+)
+
+# Interface declaration
+reader: interface (
+	Read λ () Slice[byte],
+)
+
+# Type methods
+λ ReadAll (self *exampleStruct, a i32, b i32) {
+	#...
+}
+
+v: &exampleStruct(
+	A: 10,
+)
+v.ReadAll 123 456
+G.ReadAll v 123 456
+
+# Generic struct declaration
+Map: struct [K type, V type] (
+	buckets: Slice[(K,V)],
+	load:    f32,
+)
+
+# Generic type methods work similar
+λ Iterate [K, V] (self *Map[K, V], func λ (K, V)) {
+	#...
+}
+
+m: &Map[string, string]{}
+m.Iterate                     # Type inference works when function is called as a member of a function
+Map[string, string].Iterate m # Type inference
+Map.Iterate m                 # Type inference
+
+# Multiple return arguments
+(x, y): F 2 3
+# or
+(x i32, y i32): F 2 3
+# even
+(x i32, y i32): F 2 3
+
+# Variadic function declaration
+λ Sum (list ..i32) i32 {
+	#...
+}
+
+# Keyword arguments
+λ Ls (groupDirectories bool: false) i32 {
+	# ..
+}
+
+# Match statement example
+10 + match a {
+	b ⇒ a + b
+	0 ⇒ 23
+	1 ⇒ {
+		r: doSomething with arguments
+		lel r
+	}
+	_ ⇒ 12
+}
+
+# Channels
+kill: Channel[i32]{}
+kill ← 10
+v: ←kill

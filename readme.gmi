@@ -1,0 +1,95 @@
+# turtle
+
+## goals
+
+First and foremost, turtle is a hobby operating system. As a consequence, it needs to be a pleasurable experience to write and read.
+
+Second, I want to keep things simple. turtle should be an operating system that pays careful attention to the cost of abstractions, not only their benefits.
+
+Beyond these abstract goals, there's a few concrete ideas that I want to incorporate into turtle. turtle as an operating system is inseparable from the language that was designed for it, straw. All programs, including the kernel should be able to be written in straw in a manner that isn't limiting. Many existing languages are capable of being used in this manner. A far more bold requirement for straw is that it needs to be a reasonable language to use as the interactive shell for turtle.
+
+Because of this requirement, it doesn't really make sense for the computer to be configured into running discrete binaries as in unix. Mixing 'procedures' and 'programs' is bound to be more a more confusing abstraction surface for users of the system. Instead, what are conventionally thought of as programs will compile into a precompiled library. All precompiled libraries in /lib will be provided to the straw language running in interpreter mode by being imported by default. In the end, there are only procedures. The only place that should spawn discrete processes is the init supervisor.
+
+As in plan9, stateful resources should be mapped to the filesystem under a namespace, like processes, network, audio, etc. Even something like the data in a git repository should be mapped as a filesystem. One problem with files is that they have an implicitly defined format. Extensions can help with specification, but are insufficient. All files that are specified internally within turtle should be written in straw's serialization format, which is built into the language. This serialization format should have an interchangable human readable mode and optimized binary format.
+
+## motivations
+
+For most people, I suppose that this section won't be interesting, but it's necessary for me to make clear exactly why I'm doing this when I'm undertaking such a huge a project. Otherwise, my focus will waver and my motiviation will dim.
+
+For one, I've always wanted to make some kind of complex system, an institution, or really any work that I could call my own. Perhaps it's just a part of the universal human experience, but I feel an intrinsic desire to build things, and an even greater desire to build something that is great, well thought-out, and will out last me. This desire was always a part of me. I would always daydream as a kid about a family of scientist dogs inhabiting their sophisticated castle (not entirely unlike Tony Stark's mansion) filled to the brim with futuristic technology. I think this feeling is what attracted me to programming in the first place -- you could build your own castle made of digital bricks with essentially no cost but time.
+
+As I became a better programmer, I grew more and more sure that I would build a programming language. I may be biased, but I think a programming language is the pinnacle of craftmanship, and failing that, is at least the pinnacle for a programmer. At this point in my life, I think I have just enough knowledge and skill to get started, and so that's exactly what I'm going to do. If I don't get started, I never will, and will always regret it.
+
+But it isn't enough just to build a programming language. Tolkien wrote thousands of pages of lore, an entire meticulously-crafted and consistent world just to build a home for his language. Building an operating system is just a natural extension for a language like mine.
+
+Another reason is that designing something like a language is just so interesting. As with almost anything else, there's way more complexity and nuance to creating a complete system than I could comprehend, and it's difficult to articulate the little that I do. Even in my preliminary phases of designing a language, I have to weigh each feature in terms of conceptual clarity, code complexity, composability, readability, runtime speed, compiletime speed, and a bajillion other factors I wasn't even aware of before. To say that designing a language is NP-hard is selling it short.
+
+Exploring something to such depths, especially something for which I feel compelled to do, is a delightful experience -- the world is a fractal, with each locality having essentially infinite detail. However, even among the various branches of the world, I think computation is an especially fruitful slice to dive into.
+
+Another thing I enjoy about learning through experience is that I appreciate the world more. The same nuances that I find difficult when designing something like a language are things that are taken as granted when learning.
+
+For example when you look at something like Go, the design is so simple and clear that it seems obvious. Learning to use Go is, all things considered, pretty straighforward. Before trying to design my own language, Go was already my favorite language to use for a variety of reasons, but after giving a go of it myself, I have an even greater appreciation for the language and its creators. The same goes for a whole bunch of things that I can't get into.
+
+Each of these reasons is enough for me to at least try creating a programming language and operating system, but with all of these desires in conjuction, I have never been more sure that this is a project that I will either see through or die trying. I'm pretty sure it will take around 10 years to get anywhere close to the point I want to get to. Most likely, it will be more. That's fine.
+
+## straw
+
+## os references
+
+### linux
+
+Linux is a tried and true monolithic kernel with a ton of features. I don't have much to say about linux as a whole, because it's the standard and by definition doesn't have many exceptional, non-standard features.
+
+### bsd/openbsd
+
+Personally, I like OpenBSD and the BSD flavors of unix in general. For Linux, my favorite distribution is Void Linux by a wide margin, which was created by a BSD contributor and shares a lot of the BSD ethos. What I like about them is their commitment to an integrated system and quality of simple and effective code. Ultimately it shows that to upkeep maintainable code over a long period of time, there is a need to actively limit feature creep.
+
+OpenBSD's main focus is specifically on security. As much as I would like to emulate their approach, I think security is one of those things that takes second footing to an actually operating operating system. Essentially, I will worry about it later.
+
+### plan9
+
+plan9's innovation deals with exctending unix's file abstraction to practically everything. A similar feature will probably be implemented into turtle.
+
+### serenity
+
+Andreas Kling, the creator of serenity used to work in the Apple ecosystem The main thing about serenity that I find attractive is it's centralized development which enables extremely fast iteration and its GUI that's consistent throughout the entire system. It's not experimental with the various abstractions by design and tries to implement a sane version of the most common, not necessarily the best abstractions throughout computing history.
+
+### hubris
+
+Hubris is interesting in the sense that it is statically configured and made in Rust. Not too familiar with it, but being statically configured is an interesting concept for an operating system. It's definitely makes sense for embedded applications for pretty clear reasons, but also might be interesting to use within virtualized contexts since static and ultimately repeatable configurations is what docker tries to achieve. Maybe turtle could support a statically configured mode in which dynamic things can be turned off?
+
+### redox
+
+## language references
+
+### c
+
+### zig
+
+Zig's most interesting feature is its meta
+
+### rust
+
+### vlang
+
+### go
+
+### haskell
+
+### apl
+
+### rc
+
+### limbo
+
+### spiral language
+
+### red/rebol
+
+### jai
+
+## serialization formats
+
+### amazon ion
+
+### protobuf
