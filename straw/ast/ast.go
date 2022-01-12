@@ -8,7 +8,7 @@ package ast
 import (
 	"strings"
 
-	"github.com/yjp20/straw/token"
+	"github.com/yjp20/turtle/straw/token"
 )
 
 type Node interface {

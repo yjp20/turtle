@@ -1,6 +1,6 @@
 package straw
 
-import "github.com/yjp20/straw/token"
+import "github.com/yjp20/turtle/straw/token"
 
 type Precedence int
 

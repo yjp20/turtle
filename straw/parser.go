@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/yjp20/straw/ast"
-	"github.com/yjp20/straw/token"
+	"github.com/yjp20/turtle/straw/ast"
+	"github.com/yjp20/turtle/straw/token"
 )
 
 const NoPos = token.Pos(-1)
@@ -63,7 +63,12 @@ func (p *Parser) parseStatements() []ast.Statement {
 		if p.tok == token.RIGHT_BRACE || p.tok == token.RIGHT_PAREN {
 			break
 		}
-		statements = append(statements, p.parseStatement())
+		statement := p.parseStatement()
+		switch statement.(type) {
+		case *ast.EmptyStatement:
+		default:
+			statements = append(statements, statement)
+		}
 	}
 	return statements
 }
@@ -137,6 +142,9 @@ func (p *Parser) parseAtomicExpressionList() ast.Expression {
 	for {
 		expr := p.parseAtomicExpression()
 		if expr == nil {
+			if len(expressions) == 0 {
+				return nil
+			}
 			return &ast.AtomicExpressionList{Expressions: expressions}
 		}
 		expressions = append(expressions, expr)
@@ -259,9 +267,9 @@ func (p *Parser) consumeTuple() *ast.Tuple {
 	stmts := p.parseStatements()
 	rp := p.consume(token.RIGHT_PAREN)
 	return &ast.Tuple{
-		Left:  lp,
+		Left:       lp,
 		Statements: stmts,
-		Right: rp,
+		Right:      rp,
 	}
 }
 
@@ -270,9 +278,9 @@ func (p *Parser) consumeBrackTuple() *ast.Tuple {
 	stmts := p.parseStatements()
 	rp := p.consume(token.RIGHT_BRACK)
 	return &ast.Tuple{
-		Left:  lp,
+		Left:       lp,
 		Statements: stmts,
-		Right: rp,
+		Right:      rp,
 	}
 }
 

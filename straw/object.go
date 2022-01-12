@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/yjp20/straw/ast"
+	"github.com/yjp20/turtle/straw/ast"
 )
 
 type ObjectType int

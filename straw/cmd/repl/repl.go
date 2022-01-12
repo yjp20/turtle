@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/yjp20/straw"
+	"github.com/yjp20/turtle/straw"
 )
 
 var PROMPT = ">>> "

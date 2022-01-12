@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/yjp20/straw/token"
+	"github.com/yjp20/turtle/straw/token"
 )
 
 func expect(l *Lexer, t *testing.T, tok token.Token, lit string) {

@@ -1,4 +1,4 @@
-module github.com/yjp20/straw
+module github.com/yjp20/turtle/straw
 
 go 1.17
 

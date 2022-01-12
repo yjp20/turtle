@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/yjp20/straw/ast"
-	"github.com/yjp20/straw/token"
+	"github.com/yjp20/turtle/straw/ast"
+	"github.com/yjp20/turtle/straw/token"
 )
 
 // Basic tree walk interpreter implementation
@@ -44,6 +44,7 @@ func Eval(node ast.Node, env *Frame) Object {
 		if objs[0].Type() == FunctionType {
 			return call(objs[0].(*Function), objs[1:], env)
 		}
+		return Eval(e.Expressions[0], env)
 
 	case *ast.AssignStatement:
 		evalAssignment(e, env)
