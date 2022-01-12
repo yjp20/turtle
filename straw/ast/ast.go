@@ -112,7 +112,7 @@ func (rs *ReturnStatement) End() token.Pos { return rs.Expression.End() }
 
 type ForStatement struct {
 	For        token.Pos
-	Statements []Statement
+	Clauses    []Statement
 	Expression Expression
 }
 
@@ -139,6 +139,14 @@ func (id *Identifier) expressionNode() {}
 func (id *Identifier) Pos() token.Pos  { return id.NamePos }
 func (id *Identifier) End() token.Pos  { return id.NamePos + token.Pos(len(id.Name)) }
 
+type AtomicExpressionList struct {
+	Expressions []Expression
+}
+
+func (ael *AtomicExpressionList) expressionNode() {}
+func (ael *AtomicExpressionList) Pos() token.Pos  { return ael.Expressions[0].Pos() }
+func (ael *AtomicExpressionList) End() token.Pos  { return ael.Expressions[0].End() }
+
 type Selector struct {
 	Expression Expression
 	Selection  *Identifier
@@ -157,24 +165,15 @@ func (i *Indexor) expressionNode() {}
 func (i *Indexor) Pos() token.Pos  { return i.Expression.Pos() }
 func (i *Indexor) End() token.Pos  { return i.Index.End() }
 
-type Constructor struct {
-	Expression Expression
-	Values      Expression
-}
-
-func (c *Constructor) expressionNode() {}
-func (c *Constructor) Pos() token.Pos  { return c.Expression.Pos() }
-func (c *Constructor) End() token.Pos  { return c.Values.End() }
-
 type Tuple struct {
-	LeftParen  token.Pos
-	RightParen token.Pos
+	Left       token.Pos
+	Right      token.Pos
 	Statements []Statement
 }
 
 func (t *Tuple) expressionNode() {}
-func (t *Tuple) Pos() token.Pos  { return t.LeftParen }
-func (t *Tuple) End() token.Pos  { return t.RightParen }
+func (t *Tuple) Pos() token.Pos  { return t.Left }
+func (t *Tuple) End() token.Pos  { return t.Right }
 
 type Block struct {
 	LeftBrace  token.Pos
@@ -247,6 +246,22 @@ func (rl *RangeLiteral) expressionNode() {}
 func (rl *RangeLiteral) Pos() token.Pos  { return rl.RangePos }
 func (rl *RangeLiteral) End() token.Pos  { return rl.RightPos + 1 }
 
+type TrueLiteral struct {
+	True token.Pos
+}
+
+func (tl *TrueLiteral) expressionNode() {}
+func (tl *TrueLiteral) Pos() token.Pos  { return tl.True }
+func (tl *TrueLiteral) End() token.Pos  { return tl.True + 4 }
+
+type FalseLiteral struct {
+	False token.Pos
+}
+
+func (fl *FalseLiteral) expressionNode() {}
+func (fl *FalseLiteral) Pos() token.Pos  { return fl.False }
+func (fl *FalseLiteral) End() token.Pos  { return fl.False + 5 }
+
 type FunctionDefinition struct {
 	Func       token.Pos
 	Identifier *Identifier
@@ -290,13 +305,14 @@ func (i *Infix) expressionNode() {}
 func (i *Infix) Pos() token.Pos  { return i.Left.Pos() }
 func (i *Infix) End() token.Pos  { return i.Right.End() }
 
-type ExpressionList struct {
-	Expressions []Expression
+type Bind struct {
+	Left  Expression
+	Right Expression
 }
 
-func (el *ExpressionList) expressionNode() {}
-func (el *ExpressionList) Pos() token.Pos  { return el.Expressions[0].Pos() }
-func (el *ExpressionList) End() token.Pos  { return el.Expressions[len(el.Expressions)-1].End() }
+func (b *Bind) expressionNode() {}
+func (b *Bind) Pos() token.Pos  { return b.Left.Pos() }
+func (b *Bind) End() token.Pos  { return b.Right.End() }
 
 type TypeSpec struct {
 	Type    token.Token

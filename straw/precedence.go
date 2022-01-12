@@ -11,8 +11,6 @@ const (
 	COMPARE
 	SUM
 	PRODUCT
-	CALL
-	SELECTOR
 )
 
 func GetPrecedence(tok token.Token) (Precedence, Precedence) {
@@ -27,11 +25,6 @@ func GetPrecedence(tok token.Token) (Precedence, Precedence) {
 		return SUM, SUM
 	case token.MUL, token.QUO:
 		return PRODUCT, PRODUCT
-	case token.IDENT:
-		return CALL, CALL
-	case token.PERIOD:
-		return SELECTOR, SELECTOR
-	default:
-		return LOWEST, LOWEST
 	}
+	return LOWEST, LOWEST
 }

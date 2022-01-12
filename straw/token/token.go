@@ -14,6 +14,8 @@ const (
 	FLOAT  // 123. 123.45 0.34
 	RUNE   // 'a'
 	STRING // "abc"
+	TRUE   // true
+	FALSE  // false
 
 	ADD // +
 	SUB // -
@@ -69,7 +71,7 @@ const (
 	MUTABLE      // μ
 	COMPILE_TIME // σ
 
-	RANGE    // range
+	RANGE     // range
 	CHAN      // chan
 	INTERFACE // interface
 	STRUCT    // struct
@@ -83,6 +85,11 @@ func Lookup(lit string) Token {
 		return MUTABLE
 	case "σ":
 		return COMPILE_TIME
+
+	case "true":
+		return TRUE
+	case "false":
+		return FALSE
 
 	case "or":
 		return OR

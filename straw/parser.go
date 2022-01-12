@@ -37,7 +37,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 		Statements: p.parseStatements(),
 	}
 	if p.tok != token.EOF {
-		// panic("DIDNT FINISH")
+		p.errors = append(p.errors, fmt.Errorf("Didn't consume all tokens in the lexer"))
 	}
 	return program
 }
@@ -81,8 +81,6 @@ func (p *Parser) parseStatement() ast.Statement {
 		statement = p.consumeBranchStatement()
 	case token.FOR:
 		statement = p.consumeForStatement()
-	case token.SEMICOLON:
-		statement = p.consumeEmptyStatement()
 	default:
 		statement = p.consumeFlexStatement()
 	}
@@ -95,30 +93,26 @@ func (p *Parser) parseStatement() ast.Statement {
 }
 
 func (p *Parser) parseExpression(precedence Precedence) ast.Expression {
-	var left ast.Expression = p.parseAtomicExpression()
-	if left == nil {
-		return nil
+	var left ast.Expression = p.parseAtomicExpressionList()
+
+	lp, rp := GetPrecedence(p.tok)
+	if precedence > lp {
+		return left
 	}
 
 	for {
 		switch p.tok {
-		case token.ADD, token.SUB, token.MUL, token.QUO, token.EQUAL, token.LESS_EQUAL, token.LESS, token.GREATER_EQUAL, token.GREATER, token.NOT_EQUAL, token.PERIOD:
-			lp, rp := GetPrecedence(p.tok)
-			p.nextToken()
-			if precedence > lp {
-				return left
-			}
+		case token.ADD, token.SUB, token.MUL, token.QUO, token.EQUAL, token.LESS_EQUAL, token.LESS, token.GREATER_EQUAL, token.GREATER, token.NOT_EQUAL:
+			tok := p.tok
+			pos := p.consume(p.tok)
+			expr := p.parseExpression(rp)
 			left = &ast.Infix{
-				Operator:    p.tok,
-				OperatorPos: p.pos,
+				Operator:    tok,
+				OperatorPos: pos,
 				Left:        left,
-				Right:       p.parseExpression(rp),
+				Right:       expr,
 			}
 		case token.THEN:
-			lp, rp := GetPrecedence(p.tok)
-			if precedence > lp {
-				return left
-			}
 			p.consume(token.THEN)
 			var t, f ast.Expression
 			t = p.parseExpression(LOWEST)
@@ -132,38 +126,38 @@ func (p *Parser) parseExpression(precedence Precedence) ast.Expression {
 				False:       f,
 			}
 		default:
-			lp, rp := GetPrecedence(token.IDENT)
-			if precedence > lp {
-				return left
-			}
-			expr := p.parseExpression(rp)
-			if expr == nil {
-				return left
-			}
-			left = &ast.Infix{
-				Operator:    p.tok,
-				OperatorPos: p.pos,
-				Left:        left,
-				Right:       expr,
-			}
+			println(p.tok.String())
+			return left
 		}
 	}
 }
 
+func (p *Parser) parseAtomicExpressionList() ast.Expression {
+	expressions := make([]ast.Expression, 0)
+	for {
+		expr := p.parseAtomicExpression()
+		if expr == nil {
+			return &ast.AtomicExpressionList{Expressions: expressions}
+		}
+		expressions = append(expressions, expr)
+	}
+}
+
 // Parses an atomic expression, which is an expression that is not joined by
-// infix operators or is a part of an expression list. Returns nil if the
-// current cursor is not an atomic expression.
+// infix operators or is a part of an expression list, ie. expressions that are
+// prefix, postfix, or literals. Returns nil if the current cursor is not an
+// atomic expression.
 func (p *Parser) parseAtomicExpression() ast.Expression {
 	var expression ast.Expression
 	switch p.tok {
 	case token.NOT, token.SUB, token.MUL, token.AND:
 		tok := p.tok
-		pos := p.pos
-		p.next()
+		pos := p.consume(p.tok)
+		expr := p.parseAtomicExpression()
 		expression = &ast.Prefix{
 			Operator:    tok,
 			OperatorPos: pos,
-			Expression:  p.parseAtomicExpression(),
+			Expression:  expr,
 		}
 	case token.LEFT_BRACE:
 		expression = p.consumeBlock()
@@ -187,14 +181,19 @@ func (p *Parser) parseAtomicExpression() ast.Expression {
 		expression = p.consumeSpread()
 	case token.INTERFACE, token.STRUCT:
 		expression = p.consumeTypeSpec()
+	case token.TRUE:
+		expression = p.consumeTrueLiteral()
+	case token.FALSE:
+		expression = p.consumeFalseLiteral()
 	default:
 		return nil
 	}
 
 	for p.tok == token.LEFT_BRACK {
+		tuple := p.consumeBrackTuple()
 		expression = &ast.Indexor{
 			Expression: expression,
-			Index:      p.consumeBrackTuple(),
+			Index:      tuple,
 		}
 	}
 
@@ -206,6 +205,9 @@ func (p *Parser) parseAtomicExpression() ast.Expression {
 
 func (p *Parser) consumeFlexStatement() ast.Statement {
 	left := p.parseExpression(LOWEST)
+	if left == nil {
+		return &ast.EmptyStatement{}
+	}
 	if p.tok == token.ASSIGN {
 		p.consume(token.ASSIGN)
 		right := p.parseExpression(LOWEST)
@@ -224,59 +226,64 @@ func (p *Parser) consumeEmptyStatement() *ast.EmptyStatement {
 }
 
 func (p *Parser) consumeBranchStatement() *ast.BranchStatement {
+	tok := p.tok
+	pos := p.consume(p.tok)
+	var label *ast.Identifier
+	if p.tok == token.IDENT {
+		label = p.consumeIdentifier()
+	}
 	return &ast.BranchStatement{
-		Keyword:    p.tok,
-		KeywordPos: p.consume(p.tok),
-		Label:      p.consumeIdentifier(),
+		Keyword:    tok,
+		KeywordPos: pos,
+		Label:      label,
 	}
 }
 
 func (p *Parser) consumeForStatement() *ast.ForStatement {
-	print("AAA")
-	defer print("BBB")
 	pos := p.consume(token.FOR)
-	clauses := p.consumeForClauses()
+	clauses := p.parseStatements()
 	p.consume(token.RIGHT_ARROW)
+	expr := p.parseExpression(LOWEST)
 	return &ast.ForStatement{
 		For:        pos,
-		Statements: clauses,
-		Expression: p.parseExpression(LOWEST),
+		Clauses:    clauses,
+		Expression: expr,
 	}
-}
-
-func (p *Parser) consumeForClauses() []ast.Statement {
-	statements := []ast.Statement{}
-	for p.tok != token.RIGHT_ARROW {
-		statements = append(statements, p.parseStatement())
-		p.consumeSemi()
-	}
-	return statements
 }
 
 // ---
 // Expressions
 
 func (p *Parser) consumeTuple() *ast.Tuple {
+	lp := p.consume(token.LEFT_PAREN)
+	stmts := p.parseStatements()
+	rp := p.consume(token.RIGHT_PAREN)
 	return &ast.Tuple{
-		LeftParen:  p.consume(token.LEFT_PAREN),
-		Statements: p.parseStatements(),
-		RightParen: p.consume(token.RIGHT_PAREN),
+		Left:  lp,
+		Statements: stmts,
+		Right: rp,
 	}
 }
 
 func (p *Parser) consumeBrackTuple() *ast.Tuple {
+	lp := p.consume(token.LEFT_BRACK)
+	stmts := p.parseStatements()
+	rp := p.consume(token.RIGHT_BRACK)
 	return &ast.Tuple{
-		LeftParen:  p.consume(token.LEFT_BRACK),
-		Statements: p.parseStatements(),
-		RightParen: p.consume(token.RIGHT_BRACK),
+		Left:  lp,
+		Statements: stmts,
+		Right: rp,
 	}
 }
 
 func (p *Parser) consumeBlock() *ast.Block {
+	lp := p.consume(token.LEFT_BRACE)
+	stmts := p.parseStatements()
+	rp := p.consume(token.RIGHT_BRACE)
 	return &ast.Block{
-		LeftBrace:  p.consume(token.LEFT_BRACE),
-		Statements: p.parseStatements(),
-		RightBrace: p.consume(token.RIGHT_BRACE),
+		LeftBrace:  lp,
+		Statements: stmts,
+		RightBrace: rp,
 	}
 }
 
@@ -372,6 +379,16 @@ func (p *Parser) consumeRangeLiteral() *ast.RangeLiteral {
 	return rl
 }
 
+func (p *Parser) consumeTrueLiteral() *ast.TrueLiteral {
+	pos := p.consume(token.TRUE)
+	return &ast.TrueLiteral{True: pos}
+}
+
+func (p *Parser) consumeFalseLiteral() *ast.FalseLiteral {
+	pos := p.consume(token.FALSE)
+	return &ast.FalseLiteral{False: pos}
+}
+
 func (p *Parser) consumeFunctionDefinition() *ast.FunctionDefinition {
 	fd := &ast.FunctionDefinition{}
 	fd.Func = p.consume(token.FUNC)
@@ -392,9 +409,11 @@ func (p *Parser) consumeFunctionDefinition() *ast.FunctionDefinition {
 }
 
 func (p *Parser) consumeSpread() *ast.Spread {
+	pos := p.consume(token.ELIPSIS)
+	expr := p.parseAtomicExpression()
 	return &ast.Spread{
-		Elipsis:    p.consume(token.ELIPSIS),
-		Expression: p.parseAtomicExpression(),
+		Elipsis:    pos,
+		Expression: expr,
 	}
 }
 
@@ -422,11 +441,12 @@ func (p *Parser) consumeCommentGroup() *ast.CommentGroup {
 	}
 	group := &ast.CommentGroup{Lines: make([]*ast.Comment, 0)}
 	for p.tok == token.COMMENT {
+		lit := p.lit
+		pos := p.consume(token.COMMENT)
 		group.Lines = append(group.Lines, &ast.Comment{
-			TextPos: p.pos,
-			Text:    p.lit,
+			TextPos: pos,
+			Text:    lit,
 		})
-		p.nextToken()
 	}
 	return group
 }

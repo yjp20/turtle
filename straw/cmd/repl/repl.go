@@ -2,9 +2,9 @@ package main
 
 import (
 	"bufio"
-	"os"
-	"fmt"
 	"encoding/json"
+	"fmt"
+	"os"
 
 	"github.com/yjp20/straw"
 )
@@ -13,6 +13,7 @@ var PROMPT = ">>> "
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
+	env := straw.NewFrame(nil)
 
 	for {
 		fmt.Fprintf(os.Stdout, PROMPT)
@@ -23,7 +24,10 @@ func main() {
 
 		line := scanner.Bytes()
 		parser := straw.NewParser(line)
-		debug(parser.ParseProgram())
+		program := parser.ParseProgram()
+		eval := straw.Eval(program, env)
+		debug(program)
+		println(eval.Inspect())
 	}
 }
 
