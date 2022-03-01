@@ -1,4 +1,4 @@
-package straw
+package parser
 
 import (
 	"encoding/json"

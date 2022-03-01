@@ -139,13 +139,13 @@ func (id *Identifier) expressionNode() {}
 func (id *Identifier) Pos() token.Pos  { return id.NamePos }
 func (id *Identifier) End() token.Pos  { return id.NamePos + token.Pos(len(id.Name)) }
 
-type AtomicExpressionList struct {
+type CallExpression struct {
 	Expressions []Expression
 }
 
-func (ael *AtomicExpressionList) expressionNode() {}
-func (ael *AtomicExpressionList) Pos() token.Pos  { return ael.Expressions[0].Pos() }
-func (ael *AtomicExpressionList) End() token.Pos  { return ael.Expressions[0].End() }
+func (cl *CallExpression) expressionNode() {}
+func (cl *CallExpression) Pos() token.Pos  { return cl.Expressions[0].Pos() }
+func (cl *CallExpression) End() token.Pos  { return cl.Expressions[0].End() }
 
 type Selector struct {
 	Expression Expression
@@ -194,6 +194,14 @@ type If struct {
 func (i *If) expressionNode() {}
 func (i *If) Pos() token.Pos  { return i.True.Pos() }
 func (i *If) End() token.Pos  { return i.False.End() }
+
+type DefaultLiteral struct {
+	DefaultPos token.Pos
+}
+
+func (dl *DefaultLiteral) expressionNode() {}
+func (dl *DefaultLiteral) Pos() token.Pos  { return dl.DefaultPos }
+func (dl *DefaultLiteral) End() token.Pos  { return dl.DefaultPos + 1 }
 
 type IntLiteral struct {
 	IntPos  token.Pos
@@ -268,12 +276,12 @@ type FunctionDefinition struct {
 	Args       *Tuple
 	Params     *Tuple
 	Return     Expression
-	Block      *Block
+	Body       Statement
 }
 
 func (fd *FunctionDefinition) expressionNode() {}
 func (fd *FunctionDefinition) Pos() token.Pos  { return fd.Func }
-func (fd *FunctionDefinition) End() token.Pos  { return fd.Block.End() }
+func (fd *FunctionDefinition) End() token.Pos  { return fd.Body.End() }
 
 type Spread struct {
 	Elipsis    token.Pos
@@ -324,3 +332,25 @@ type TypeSpec struct {
 func (ts *TypeSpec) expressionNode() {}
 func (ts *TypeSpec) Pos() token.Pos  { return ts.TypePos }
 func (ts *TypeSpec) End() token.Pos  { return ts.Spec.End() }
+
+type As struct {
+	Value Expression
+	Type  Expression
+}
+
+func (a *As) expressionNode() {}
+func (a *As) Pos() token.Pos  { return a.Value.Pos() }
+func (a *As) End() token.Pos  { return a.Type.End() }
+
+type Match struct {
+	Match      token.Pos
+	Left       token.Pos
+	Right      token.Pos
+	Item       Expression
+	Conditions []Expression
+	Bodies     []Statement
+}
+
+func (m *Match) expressionNode() {}
+func (m *Match) Pos() token.Pos  { return m.Left }
+func (m *Match) End() token.Pos  { return m.Right + 1 }

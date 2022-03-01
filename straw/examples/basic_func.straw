@@ -1,0 +1,2 @@
+func q (i int32, j in32) -> i * j + 2
+.q 2 3

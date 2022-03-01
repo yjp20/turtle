@@ -4,14 +4,7 @@ max_size i32: 3
 cli: import "cli"
 http: import "net/http"
 
-# Function declaration (preferred)
-# capitalized variables / functions are exported
-λ SomeFunction (a i32, b i32) (i32, i32) {
-	# ..
-}
-
-# which is equivalent to
-SomeFunction: λ (a i32, b i32) (i32, i32) {
+SomeFunction: λ (a i32, b i32) (i32, i32) → {
 	# ..
 }
 
@@ -20,23 +13,23 @@ SomeFunction: λ (a i32, b i32) (i32, i32) {
 
 a: "hello"
 a = "hello" ⇒ {
-	doSomething
+	do doSomething
 	print "A"
 	10
 } ~ {
-	doSomethingElse
+	do doSomethingElse
 	print "B"
 	"A"
 }
 
 # For statements
-template: "hello @"
+template :: "hello @"
 ∀ (i, c) ∈ template → print c
 
 # for based on int ranges
-∀ i ∈ range[0‥10) → print i
-∀ i ∈ range[0‥9]  → print i
-∀ i ∈ range(-1‥9] → print i
+∀ i ∈ range [0‥10) → print i
+∀ i ∈ range [0‥9]  → print i
+∀ i ∈ range (-1‥9] → print i
 
 # one clause loop i: 0
 ∀ i < 10 → {
@@ -45,18 +38,18 @@ template: "hello @"
 }
 
 # two clause loop
-i: 0
-∀ i<10; i:i+1 → {
+i :: 0
+∀ i<10; i :: i+1 → {
 	# ...
 }
 
 # three clause loop
-∀ i: 0; i<10; i: i+1 → {
+∀ i::0; i<10; i::i+1 → {
 	# ...
 }
 
 # Parametrized functions
-λ max [T type] (a T, b T) T {
+λ max [T type] (a T, b T) T → {
 	a > b ⇒ a ~ b
 }
 
@@ -105,8 +98,8 @@ reader: interface (
 v: &exampleStruct(
 	A: 10,
 )
-v.ReadAll 123 456
-G.ReadAll v 123 456
+do v.ReadAll 123 456
+do G.ReadAll v 123 456
 
 # Generic struct declaration
 Map: struct [K type, V type] (

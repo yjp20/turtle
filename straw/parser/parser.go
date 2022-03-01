@@ -1,7 +1,9 @@
-package straw
+package parser
+
+// This package deals with the static analysis of straw files like lexing and
+// parsing.
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -98,7 +100,7 @@ func (p *Parser) parseStatement() ast.Statement {
 }
 
 func (p *Parser) parseExpression(precedence Precedence) ast.Expression {
-	var left ast.Expression = p.parseAtomicExpressionList()
+	left := p.parseAtomicExpression()
 
 	lp, rp := GetPrecedence(p.tok)
 	if precedence > lp {
@@ -130,25 +132,28 @@ func (p *Parser) parseExpression(precedence Precedence) ast.Expression {
 				True:        t,
 				False:       f,
 			}
+		case token.IDENT:
+			t := p.parseExpression(LOWEST)
+			left = &ast.As{Value: left, Type: t}
+
 		default:
-			println(p.tok.String())
+			// println(p.tok.String())
 			return left
 		}
 	}
 }
 
-func (p *Parser) parseAtomicExpressionList() ast.Expression {
+func (p *Parser) consumeCallExpression() ast.Expression {
+	p.consume(token.PERIOD)
 	expressions := make([]ast.Expression, 0)
 	for {
 		expr := p.parseAtomicExpression()
 		if expr == nil {
-			if len(expressions) == 0 {
-				return nil
-			}
-			return &ast.AtomicExpressionList{Expressions: expressions}
+			break
 		}
 		expressions = append(expressions, expr)
 	}
+	return &ast.CallExpression{Expressions: expressions}
 }
 
 // Parses an atomic expression, which is an expression that is not joined by
@@ -171,6 +176,8 @@ func (p *Parser) parseAtomicExpression() ast.Expression {
 		expression = p.consumeBlock()
 	case token.LEFT_PAREN:
 		expression = p.consumeTuple()
+	case token.DEFAULT:
+		expression = p.consumeDefaultLiteral()
 	case token.INT:
 		expression = p.consumeIntLiteral()
 	case token.FLOAT:
@@ -193,6 +200,10 @@ func (p *Parser) parseAtomicExpression() ast.Expression {
 		expression = p.consumeTrueLiteral()
 	case token.FALSE:
 		expression = p.consumeFalseLiteral()
+	case token.MATCH:
+		expression = p.consumeMatchExpression()
+	case token.PERIOD:
+		expression = p.consumeCallExpression()
 	default:
 		return nil
 	}
@@ -212,7 +223,7 @@ func (p *Parser) parseAtomicExpression() ast.Expression {
 // Statements
 
 func (p *Parser) consumeFlexStatement() ast.Statement {
-	left := p.parseExpression(LOWEST)
+	left := p.parseExpression(AS)
 	if left == nil {
 		return &ast.EmptyStatement{}
 	}
@@ -270,6 +281,13 @@ func (p *Parser) consumeTuple() *ast.Tuple {
 		Left:       lp,
 		Statements: stmts,
 		Right:      rp,
+	}
+}
+
+func (p *Parser) consumeDefaultLiteral() *ast.DefaultLiteral {
+	pos := p.consume(token.DEFAULT)
+	return &ast.DefaultLiteral{
+		DefaultPos: pos,
 	}
 }
 
@@ -397,6 +415,31 @@ func (p *Parser) consumeFalseLiteral() *ast.FalseLiteral {
 	return &ast.FalseLiteral{False: pos}
 }
 
+func (p *Parser) consumeMatchExpression() *ast.Match {
+	match := p.consume(token.MATCH)
+	m := p.parseExpression(LOWEST)
+	left := p.consume(token.LEFT_BRACE)
+	c := []ast.Expression{}
+	b := []ast.Statement{}
+	i := 0
+	for p.tok != token.RIGHT_BRACE && p.tok != token.EOF && p.tok != token.SEMICOLON {
+		c = append(c, p.parseExpression(EQUAL))
+		p.consume(token.THEN)
+		b = append(b, p.parseStatement())
+		i += 1
+		p.consume(token.SEMICOLON)
+	}
+	right := p.consume(token.RIGHT_BRACE)
+	return &ast.Match{
+		Match:      match,
+		Left:       left,
+		Right:      right,
+		Item:       m,
+		Conditions: c,
+		Bodies:     b,
+	}
+}
+
 func (p *Parser) consumeFunctionDefinition() *ast.FunctionDefinition {
 	fd := &ast.FunctionDefinition{}
 	fd.Func = p.consume(token.FUNC)
@@ -407,12 +450,11 @@ func (p *Parser) consumeFunctionDefinition() *ast.FunctionDefinition {
 		fd.Params = p.consumeBrackTuple()
 	}
 	fd.Args = p.consumeTuple()
-	if p.tok != token.LEFT_BRACE {
+	if p.tok != token.RIGHT_ARROW {
 		fd.Return = p.parseAtomicExpression()
 	}
-	if p.tok == token.LEFT_BRACE {
-		fd.Block = p.consumeBlock()
-	}
+	p.consume(token.RIGHT_ARROW)
+	fd.Body = p.parseStatement()
 	return fd
 }
 
@@ -472,9 +514,4 @@ func (p *Parser) consumeSemi() {
 	if p.tok == token.SEMICOLON || p.tok == token.COMMA {
 		p.consume(p.tok)
 	}
-}
-
-func debug(something interface{}) {
-	res, _ := json.MarshalIndent(something, "", "| ")
-	println(string(res))
 }

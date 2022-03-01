@@ -1,0 +1,5 @@
+f: func (a int32, b int32) -> {
+	(a+b, a-b)
+}
+
+.f 10 3

@@ -67,6 +67,7 @@ const (
 	DEFAULT  // _
 	GO       // go
 	SELECT   // select
+	MATCH    // match
 
 	MUTABLE      // μ
 	COMPILE_TIME // σ
@@ -103,6 +104,8 @@ func Lookup(lit string) Token {
 		return GO
 	case "select":
 		return SELECT
+	case "match":
+		return MATCH
 
 	case "range":
 		return RANGE
@@ -112,6 +115,8 @@ func Lookup(lit string) Token {
 		return INTERFACE
 	case "struct":
 		return STRUCT
+	case "_":
+		return DEFAULT
 	default:
 		return IDENT
 	}

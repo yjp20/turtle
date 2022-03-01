@@ -1,11 +1,12 @@
-package straw
+package parser
 
 import "github.com/yjp20/turtle/straw/token"
 
 type Precedence int
 
 const (
-	LOWEST Precedence = iota * 2
+	AS Precedence = iota * 2
+	LOWEST
 	IF
 	EQUAL
 	COMPARE
@@ -15,6 +16,8 @@ const (
 
 func GetPrecedence(tok token.Token) (Precedence, Precedence) {
 	switch tok {
+	case token.IDENT:
+		return AS, AS
 	case token.THEN:
 		return IF + 1, IF
 	case token.EQUAL:
