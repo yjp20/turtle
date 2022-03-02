@@ -19,12 +19,13 @@ const (
 	TypeFunction
 	TypeBuiltinFunction
 
-	// Configurable Types
+	// Complex Types
 	TypeArray
 	TypeSlice
 	TypeStruct
 	TypeInterface
 	TypeTuple
+	TypeRange
 
 	// Higher-order types
 	TypeType

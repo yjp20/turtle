@@ -10,7 +10,7 @@ import (
 // Basic tree walk interpreter implementation
 
 func Eval(node ast.Node, env *Frame) Object {
-	fmt.Printf("EVAL: %T\n", node)
+	// fmt.Printf("EVAL: %T\n", node)
 	switch e := node.(type) {
 	case *ast.Program:
 		return evalStatements(e.Statements, env)
@@ -20,11 +20,13 @@ func Eval(node ast.Node, env *Frame) Object {
 		return &Tuple{Fields: evalTuple(e, env)}
 
 	case *ast.AssignStatement:
-		evalAssignment(e, env)
+		assign(e.Left, Eval(e.Right, env), env)
 	case *ast.ExpressionStatement:
 		return Eval(e.Expression, env)
 	case *ast.EmptyStatement:
 		return NULL
+	case *ast.ForStatement:
+		return evalForStatement(e, env)
 
 	case *ast.CallExpression:
 		return evalCallExpression(e, env)
@@ -45,6 +47,8 @@ func Eval(node ast.Node, env *Frame) Object {
 		return &String{e.Value}
 	case *ast.FloatLiteral:
 		return &Float64{e.Value}
+	case *ast.RangeLiteral:
+		return evalRangeLiteral(e, env)
 	case *ast.Identifier:
 		return env.Get(e.Name)
 	case *ast.FunctionDefinition:
@@ -67,6 +71,22 @@ func evalStatements(stmts []ast.Statement, env *Frame) Object {
 		}
 	}
 	return last
+}
+
+func evalForStatement(fs *ast.ForStatement, env *Frame) Object {
+	if len(fs.Clauses) == 1 {
+		if s, ok := fs.Clauses[0].(*ast.EachStatement); ok {
+			r := Eval(s.Right, env)
+			switch rr := r.(type) {
+			case *Range:
+				for i := rr.Start; i < rr.End; i++ {
+					assign(s.Left, &Int64{Value: i}, env)
+					Eval(fs.Expression, env)
+				}
+			}
+		}
+	}
+	return NULL
 }
 
 func evalFunctionDefinition(fd *ast.FunctionDefinition, env *Frame) Object {
@@ -120,11 +140,11 @@ func evalCallExpression(c *ast.CallExpression, env *Frame) Object {
 		switch e.Kind {
 		case "print":
 			for _, o := range operands {
-				print(o.(*String).Value)
+				println(o.(*String).Value)
 			}
 		case "debug":
 			for _, o := range operands {
-				print(o.Inspect())
+				println(o.Inspect())
 			}
 		case "make":
 			t := operands[0].(*Type)
@@ -142,16 +162,16 @@ func evalCallExpression(c *ast.CallExpression, env *Frame) Object {
 	return NULL
 }
 
-func evalAssignment(e *ast.AssignStatement, env *Frame) {
-	switch l := e.Left.(type) {
+func assign(left ast.Node, obj Object, env *Frame) {
+	switch l := left.(type) {
 	case *ast.Identifier:
-		env.Set(l.Name, Eval(e.Right, env))
+		env.Set(l.Name, obj)
 	case *ast.Indexor:
 		x := Eval(l.Expression, env)
 		t := Eval(l.Index, env).(*Tuple)
 		switch k := x.(type) {
 		case *Array:
-			k.Objects[t.Fields[0].Value.(*Int64).Value] = Eval(e.Right, env)
+			k.Objects[t.Fields[0].Value.(*Int64).Value] = obj
 		}
 	}
 }
@@ -214,6 +234,18 @@ func evalInfix(i *ast.Infix, operator token.Token, env *Frame) Object {
 		}
 	}
 	return NULL
+}
+
+func evalRangeLiteral(rl *ast.RangeLiteral, env *Frame) *Range {
+	l := Eval(rl.Left, env).(*Int64).Value
+	r := Eval(rl.Right, env).(*Int64).Value
+	if !rl.LeftInclusive {
+		l += 1
+	}
+	if rl.RightInclusive {
+		r += 1
+	}
+	return &Range{Start: l, End: r}
 }
 
 func evalTuple(tuple *ast.Tuple, env *Frame) []Field {

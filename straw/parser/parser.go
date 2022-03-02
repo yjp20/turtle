@@ -394,10 +394,10 @@ func (p *Parser) consumeRangeLiteral() *ast.RangeLiteral {
 
 	switch p.tok {
 	case token.RIGHT_PAREN:
-		rl.LeftInclusive = false
+		rl.RightInclusive = false
 		p.consume(token.RIGHT_PAREN)
 	case token.RIGHT_BRACK:
-		rl.LeftInclusive = true
+		rl.RightInclusive = true
 		p.consume(token.RIGHT_BRACK)
 	default:
 		p.errors = append(p.errors, fmt.Errorf("Expected to range literal to have either ')' or ']' to end the range"))

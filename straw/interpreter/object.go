@@ -21,6 +21,7 @@ type Object interface {
 type Frame struct {
 	Parent *Frame
 	Values map[string]Object
+	Return Object
 }
 
 func NewFrame(parent *Frame) *Frame {
@@ -157,6 +158,14 @@ type Array struct {
 
 func (a *Array) Type() TypeKind  { return TypeArray }
 func (a *Array) Inspect() string { return "<array[]>" }
+
+type Range struct {
+	Start int64
+	End   int64
+}
+
+func (r *Range) Type() TypeKind  { return TypeRange }
+func (r *Range) Inspect() string { return "range" }
 
 var (
 	NULL  Object = &Null{}

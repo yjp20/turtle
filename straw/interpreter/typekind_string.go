@@ -24,13 +24,14 @@ func _() {
 	_ = x[TypeStruct-13]
 	_ = x[TypeInterface-14]
 	_ = x[TypeTuple-15]
-	_ = x[TypeType-16]
-	_ = x[TypeFactory-17]
+	_ = x[TypeRange-16]
+	_ = x[TypeType-17]
+	_ = x[TypeFactory-18]
 }
 
-const _TypeKind_name = "TypeNullTypeFrameTypeDefaultTypeAnyTypeInt32TypeInt64TypeStringTypeBoolTypeFloat64TypeFunctionTypeBuiltinFunctionTypeArrayTypeSliceTypeStructTypeInterfaceTypeTupleTypeTypeTypeFactory"
+const _TypeKind_name = "TypeNullTypeFrameTypeDefaultTypeAnyTypeInt32TypeInt64TypeStringTypeBoolTypeFloat64TypeFunctionTypeBuiltinFunctionTypeArrayTypeSliceTypeStructTypeInterfaceTypeTupleTypeRangeTypeTypeTypeFactory"
 
-var _TypeKind_index = [...]uint8{0, 8, 17, 28, 35, 44, 53, 63, 71, 82, 94, 113, 122, 131, 141, 154, 163, 171, 182}
+var _TypeKind_index = [...]uint8{0, 8, 17, 28, 35, 44, 53, 63, 71, 82, 94, 113, 122, 131, 141, 154, 163, 172, 180, 191}
 
 func (i TypeKind) String() string {
 	if i < 0 || i >= TypeKind(len(_TypeKind_index)-1) {
