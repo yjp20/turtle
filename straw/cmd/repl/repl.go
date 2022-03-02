@@ -23,11 +23,19 @@ func main() {
 		if !scanned {
 			return
 		}
-
+		errors := make([]error, 0)
 		line := scanner.Bytes()
-		p := parser.NewParser(straw.Filter(line))
+		p := parser.NewParser(straw.Filter(line), errors)
 		pg := p.ParseProgram()
-		ast.Print(pg)
+
+		if len(errors) != 0 {
+			for _, err := range errors {
+				println(err.Error())
+			}
+			ast.Print(pg)
+			continue
+		}
+
 		eval := interpreter.Eval(pg, env)
 		println(eval.Inspect())
 	}

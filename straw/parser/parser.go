@@ -24,8 +24,7 @@ type Parser struct {
 	commentGroup *ast.CommentGroup
 }
 
-func NewParser(source []byte) *Parser {
-	errors := make([]error, 0)
+func NewParser(source []byte, errors []error) *Parser {
 	p := &Parser{
 		lexer:  NewLexer(source, errors),
 		errors: errors,
@@ -66,9 +65,7 @@ func (p *Parser) parseStatements() []ast.Statement {
 			break
 		}
 		statement := p.parseStatement()
-		switch statement.(type) {
-		case *ast.EmptyStatement:
-		default:
+		if _, ok := statement.(*ast.EmptyStatement); !ok {
 			statements = append(statements, statement)
 		}
 	}
@@ -111,7 +108,8 @@ func (p *Parser) parseExpression(precedence Precedence) ast.Expression {
 
 	for {
 		switch p.tok {
-		case token.ADD, token.SUB, token.MUL, token.QUO, token.EQUAL, token.LESS_EQUAL, token.LESS, token.GREATER_EQUAL, token.GREATER, token.NOT_EQUAL:
+		case token.ADD, token.SUB, token.MUL, token.QUO, token.EQUAL, token.LESS_EQUAL,
+			token.LESS, token.GREATER_EQUAL, token.GREATER, token.NOT_EQUAL:
 			tok := p.tok
 			pos := p.consume(p.tok)
 			expr := p.parseExpression(rp)
@@ -139,7 +137,6 @@ func (p *Parser) parseExpression(precedence Precedence) ast.Expression {
 			left = &ast.As{Value: left, Type: t}
 
 		default:
-			// println(p.tok.String())
 			return left
 		}
 	}
@@ -290,7 +287,7 @@ func (p *Parser) consumeReturn() *ast.ReturnStatement {
 	pos := p.consume(token.RETURN)
 	e := p.parseExpression(LOWEST)
 	return &ast.ReturnStatement{
-		Return: pos,
+		Return:     pos,
 		Expression: e,
 	}
 }
@@ -464,8 +461,10 @@ func (p *Parser) consumeFunctionDefinition() *ast.FunctionDefinition {
 	if p.tok != token.RIGHT_ARROW {
 		fd.Return = p.parseAtomicExpression()
 	}
-	p.consume(token.RIGHT_ARROW)
-	fd.Body = p.parseStatement()
+	if p.tok != token.RIGHT_ARROW {
+		p.consume(token.RIGHT_ARROW)
+		fd.Body = p.parseStatement()
+	}
 	return fd
 }
 

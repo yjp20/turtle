@@ -13,9 +13,19 @@ import (
 func main() {
 	bytes, _ := ioutil.ReadAll(os.Stdin)
 	filtered := straw.Filter(bytes)
-	p := parser.NewParser(filtered)
+
+	errors := make([]error, 0)
+	p := parser.NewParser(filtered, errors)
 	pg := p.ParseProgram()
-	ast.Print(pg)
+
+	if len(errors) != 0 {
+		for _, err := range errors {
+			println(err.Error())
+		}
+		ast.Print(pg)
+		return
+	}
+
 	env := interpreter.NewGlobalFrame()
 	eval := interpreter.Eval(pg, env)
 	println(eval.Inspect())
