@@ -40,6 +40,10 @@ func printer(n Node, indent string) {
 				fmt.Printf("%s| %s: %s\n", indent, f.Name, e)
 			case int64:
 				fmt.Printf("%s| %s: %d\n", indent, f.Name, e)
+			case int32:
+				fmt.Printf("%s| %s: %d\n", indent, f.Name, e)
+			case bool:
+				fmt.Printf("%s| %s: %t\n", indent, f.Name, e)
 			}
 		}
 	}
