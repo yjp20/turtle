@@ -6,11 +6,41 @@ First and foremost, turtle is a hobby operating system. As a consequence, it nee
 
 Second, I want to keep things simple. turtle should be an operating system that pays careful attention to the cost of abstractions, not only their benefits.
 
-Beyond these abstract goals, there's a few concrete ideas that I want to incorporate into turtle. turtle as an operating system is inseparable from the language that was designed for it, straw. All programs, including the kernel should be able to be written in straw in a manner that isn't limiting. Many existing languages are capable of being used in this manner. A far more bold requirement for straw is that it needs to be a reasonable language to use as the interactive shell for turtle.
+Third, I want to reexamine old, but time-tested abstractions and see if I can do better. Even if I can't, this will certainly give me an appreciation for their elegance (or atleast their imprortance).
 
-Because of this requirement, it doesn't really make sense for the computer to be configured into running discrete binaries as in unix. Mixing 'procedures' and 'programs' is bound to be more a more confusing abstraction surface for users of the system. Instead, what are conventionally thought of as programs will compile into a precompiled library. All precompiled libraries in /lib will be provided to the straw language running in interpreter mode by being imported by default. In the end, there are only procedures. The only place that should spawn discrete processes is the init supervisor.
+Beyond these abstract goals, there's a few concrete ideas that I want to incorporate into turtle, which I will detail in the sections below.
 
-As in plan9, stateful resources should be mapped to the filesystem under a namespace, like processes, network, audio, etc. Even something like the data in a git repository should be mapped as a filesystem. One problem with files is that they have an implicitly defined format. Extensions can help with specification, but are insufficient. All files that are specified internally within turtle should be written in straw's serialization format, which is built into the language. This serialization format should have an interchangable human readable mode and optimized binary format.
+### language first
+
+turtle as an operating system is inseparable from the language that was designed for it, straw. All programs, including the kernel should be able to be written in straw. Many existing general-purpose languages are capable of being used in this manner. A far more bold requirement for straw is that it needs to be a reasonable language to use as the interactive shell for turtle.
+
+Because of this requirement, it doesn't really make sense for the computer to be configured into running discrete binaries as in unix. In the unix way, we use C to create binaries, which are then composed together using a shell. Shell utilties are versatile since they act entirely on files, or essentially strings. In this tradeoff, we lose some of the rigor of functions and types which can help guide us in creating correct programs.
+
+Some new projects such as nushell attempts to get around this with a stricter data type for its commands. This is not a bad solution, but if we're going to go there, why not just use a programming language with auto complete and the niceties that come with it?
+
+Ultimately, I want to see if it is possible to remove the shell and unify everything under one programming language, where individual programs do not exist, only libraries.
+
+One of the problems with this, however, is that using a language in these various ways strains the focus of the language and it's effectiveness at any one task. This is why DSLs exist. This is an inherent problem that cannot be "solved", but nevertheless I have some ideas that will hopefully make it a much better experience.
+
+### universal terminal
+
+The terminal is also something I would like to experiment with. The current understanding of a terminal is essentially just a scroll of text, with some exceptions (such as being able to render images).
+
+This kind of limitation was borne out of necessity a long time ago, but it's very clear that it's no longer a necessity. Because we insist on emulating old terminals, making terminal applications that are delightful to use require some pretty arcane techniques.
+
+But this is a case of "worse is better". While using graphical displays to emulate terminals to emulate graphical displays is quite arguably illogical, a lot of people (including myself) prefer terminal applications over their graphical counterparts. As it turns out, the fundamental limitations of text generally encourage UI/UX that is preferrable to the user. The content is first and foremost out of necessity, applications are fast, and graphical elements are minimized.
+
+To replace the old scroll-of-text, keeping in mind the good limitations are important. We can remove these limitations whilst still encouraging their outcome.
+
+I have a pretty good image of what I want my version of the terminal to look like, but I have a tough time describing it. I think the best analog is to the plan9 acme text editor, which was designed in such a way that it could serve almost all purposes.
+
+Even though the plan9 developers are legendary and will be undoubtably hard to beat, I think I can do better.
+
+### accessible resources
+
+Data is one of the fundamental concerns in a computing system. A general approach to data is important to the integrity of an operating system.
+
+As in plan9, stateful resources should be mapped to the filesystem under a namespace, like processes, network, audio, etc. Even something like the data in a git repository should be mapped as a filesystem. One problem with files is that they have an implicitly defined format. File name extensions can help with specification, but are insufficient as they are mostly hints. To "fix" this problem, all files that are specified internally within turtle should be written in straw's serialization format, which is built into the language. This serialization format should have an interchangable human readable mode and optimized binary format.
 
 ## motivations
 
@@ -32,8 +62,6 @@ For example when you look at something like Go, the design is so simple and clea
 
 Each of these reasons is enough for me to at least try creating a programming language and operating system, but with all of these desires in conjuction, I have never been more sure that this is a project that I will either see through or die trying. I'm pretty sure it will take around 10 years to get anywhere close to the point I want to get to. Most likely, it will be more. That's fine.
 
-## straw
-
 ## os references
 
 ### linux
@@ -48,17 +76,19 @@ OpenBSD's main focus is specifically on security. As much as I would like to emu
 
 ### plan9
 
-plan9's innovation deals with exctending unix's file abstraction to practically everything. A similar feature will probably be implemented into turtle.
+plan9's main innovation deals with extending unix's file abstraction to practically everything. A similar feature will probably be implemented into turtle. Besides that, there are a whole lot of things taken from plan9 directly and indirectly, so much so that it will be impractical to detail all of them. Some examples include CSP, the plan9 ABI (used in Go), etc.
 
 ### serenity
 
-Andreas Kling, the creator of serenity used to work in the Apple ecosystem The main thing about serenity that I find attractive is it's centralized development which enables extremely fast iteration and its GUI that's consistent throughout the entire system. It's not experimental with the various abstractions by design and tries to implement a sane version of the most common, not necessarily the best abstractions throughout computing history.
+Andreas Kling, the creator of serenity used to work in the Apple ecosystem The main thing about serenity that I find attractive is it's centralized development which enables extremely fast iteration and its GUI that's consistent throughout the entire system. It's not experimental with the various abstractions by design and tries to implement a sane version of the most common, but not necessarily the best abstractions throughout computing history.
 
 ### hubris
 
-Hubris is interesting in the sense that it is statically configured and made in Rust. Not too familiar with it, but being statically configured is an interesting concept for an operating system. It's definitely makes sense for embedded applications for pretty clear reasons, but also might be interesting to use within virtualized contexts since static and ultimately repeatable configurations is what docker tries to achieve. Maybe turtle could support a statically configured mode in which dynamic things can be turned off?
+Hubris is interesting in the sense that it is statically configured and made in Rust. Not too familiar with it, but being statically configured is an interesting concept for an operating system. It's definitely makes sense for embedded applications for pretty clear reasons, but also might be interesting to use within virtualized contexts since static and ultimately repeatable configurations is what docker tries to achieve.
 
 ### redox
+
+Redox extends plan9's everything is a file concept to everything is a url. This solves the problem of file specification, where the data format of various different files are unclear. turtle's approach to this problem is a bit different, to the point where the url concept likely won't apply.
 
 ## language references
 
@@ -66,7 +96,7 @@ Hubris is interesting in the sense that it is statically configured and made in 
 
 ### zig
 
-Zig's most interesting feature is its meta
+Zig's most interesting feature is its metaprogramming capabilities. comptime represents a few different "kinds" of metaprogramming that can be achieved, such as conditional compilation, generics, and zero-cost abstractions. The "problem" for me is that grouping these metaprogramming faciltiies under one semantic term makes conceptual sense, but less practical sense. I think this may be a case of over-abstraction, and I'm currently experimenting with the concept of factory types, which can configure code and types. For now, the main motivating example is static configuration for speed, but I'm interested to see what the implications of being able to dynamically configure at runtime.
 
 ### rust
 
