@@ -12,7 +12,9 @@ import (
 
 func main() {
 	bytes, _ := ioutil.ReadAll(os.Stdin)
-	p := parser.NewParser(straw.Filter(bytes))
+	filtered := straw.Filter(bytes)
+	println(string(filtered))
+	p := parser.NewParser(filtered)
 	pg := p.ParseProgram()
 	ast.Print(pg)
 	env := interpreter.NewGlobalFrame()

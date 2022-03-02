@@ -187,8 +187,8 @@ func (b *Block) End() token.Pos  { return b.RightBrace }
 
 type If struct {
 	Conditional Expression
-	True        Expression
-	False       Expression
+	True        Statement
+	False       Statement
 }
 
 func (i *If) expressionNode() {}

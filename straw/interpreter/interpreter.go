@@ -10,6 +10,9 @@ import (
 // Basic tree walk interpreter implementation
 
 func Eval(node ast.Node, env *Frame) Object {
+	if env.Return != nil {
+		return NULL
+	}
 	// fmt.Printf("EVAL: %T\n", node)
 	switch e := node.(type) {
 	case *ast.Program:
@@ -27,7 +30,8 @@ func Eval(node ast.Node, env *Frame) Object {
 		return NULL
 	case *ast.ForStatement:
 		return evalForStatement(e, env)
-
+	case *ast.ReturnStatement:
+		env.Return = Eval(e.Expression, env)
 	case *ast.CallExpression:
 		return evalCallExpression(e, env)
 	case *ast.If:
@@ -135,7 +139,11 @@ func evalCallExpression(c *ast.CallExpression, env *Frame) Object {
 		for i, o := range operands {
 			frame.Set(e.Args[i].Name, o)
 		}
-		return Eval(e.Body, frame)
+		last := Eval(e.Body, frame)
+		if frame.Return != nil {
+			return frame.Return
+		}
+		return last
 	case *BuiltinFunction:
 		switch e.Kind {
 		case "print":

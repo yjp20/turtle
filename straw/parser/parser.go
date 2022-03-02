@@ -88,6 +88,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		statement = p.consumeBranchStatement()
 	case token.FOR:
 		statement = p.consumeForStatement()
+	case token.RETURN:
+		statement = p.consumeReturn()
 	default:
 		statement = p.consumeFlexStatement()
 	}
@@ -121,11 +123,11 @@ func (p *Parser) parseExpression(precedence Precedence) ast.Expression {
 			}
 		case token.THEN:
 			p.consume(token.THEN)
-			var t, f ast.Expression
-			t = p.parseExpression(LOWEST)
+			var t, f ast.Statement
+			t = p.parseStatement()
 			if p.tok == token.ELSE {
 				p.consume(token.ELSE)
-				f = p.parseExpression(rp)
+				f = p.parseStatement()
 			}
 			left = &ast.If{
 				Conditional: left,
@@ -281,6 +283,15 @@ func (p *Parser) consumeTuple() *ast.Tuple {
 		Left:       lp,
 		Statements: stmts,
 		Right:      rp,
+	}
+}
+
+func (p *Parser) consumeReturn() *ast.ReturnStatement {
+	pos := p.consume(token.RETURN)
+	e := p.parseExpression(LOWEST)
+	return &ast.ReturnStatement{
+		Return: pos,
+		Expression: e,
 	}
 }
 
