@@ -23,7 +23,7 @@ a = "hello" ⇒ {
 }
 
 # For statements
-template :: "hello @"
+template: "hello @"
 ∀ (i, c) ∈ template → print c
 
 # ∀ based on int ranges
@@ -38,18 +38,21 @@ template :: "hello @"
 }
 
 # two clause loop
-i :: 0
-∀ i<10; i :: i+1 → {
+# runs the first clause first every loop, then tests for the second clause
+# establish, condition
+i: 0
+∀ i:i+1, i<10 → {
 	# ‥.
 }
 
 # three clause loop
-∀ i::0; i<10; i::i+1 → {
+# initialize, condition, iterate
+∀ i:0; i<10; i:i+1 → {
 	# ‥.
 }
 
 # Parametrized λtions
-λ max [T type] (a T, b T) T → {
+max: λ [T type] (a T, b T) T → {
 	a > b ⇒ a ~ b
 }
 
@@ -62,20 +65,15 @@ max[string]
 	σ nextArg: 0
 	∀ (i, c) ∈ template → {
 		c = '@' ⇒ {
-			start < i ⇒ print template[start‥i]
-			print args[nextArg]
+			start < i ⇒ .print template[start‥i]
+			.print args[nextArg]
 			start: i + 1
 		}
 	}
-	start < len template ⇒ print template[start‥i]
+	start < .len template ⇒ .print template[start‥i]
 }
 
 printf["Hello @"] 12
-{
-	print "Hello "
-	print arg1
-}
-Hello 12
 
 # Struct declaration
 exampleStruct: struct (
@@ -91,15 +89,12 @@ reader: interface (
 )
 
 # Type methods
-λ ReadAll (self *exampleStruct, a i32, b i32) {
+exampleStruct/ReadAll: λ (self *exampleStruct, a i32, b i32) {
 	#‥.
 }
 
-v: &exampleStruct(
-	A: 10,
-)
-do v.ReadAll 123 456
-do G.ReadAll v 123 456
+v: .make &exampleStruct (A: 10)
+.v/ReadAll 123 456
 
 # Generic struct declaration
 Map: struct [K type, V type] (
@@ -108,12 +103,12 @@ Map: struct [K type, V type] (
 )
 
 # Generic type methods work similar
-λ Iterate [K, V] (self *Map[K, V], λ λ (K, V)) {
+Iterate: λ [K, V] (self *Map[K, V], λ f(_ K, _ V)) {
 	#‥.
 }
 
-m: &Map[string, string]{}
-m.Iterate                     # Type inference works when λtion is called as a member of a λtion
+m: .make &Map[string, string] ()
+m.Iterate                     # Type inference works when function is called as a member of a function
 Map[string, string].Iterate m # Type inference
 Map.Iterate m                 # Type inference
 
@@ -124,7 +119,7 @@ Map.Iterate m                 # Type inference
 # even
 (x i32, y i32): F 2 3
 
-# Variadic λtion declaration
+# Variadic function declaration
 λ Sum (list ‥i32) i32 {
 	#‥.
 }
@@ -139,8 +134,8 @@ Map.Iterate m                 # Type inference
 	b ⇒ a + b
 	0 ⇒ 23
 	1 ⇒ {
-		r: doSomething with arguments
-		lel r
+		r: .doSomething with arguments
+		.lel r
 	}
 	_ ⇒ 12
 }
