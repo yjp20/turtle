@@ -17,7 +17,7 @@ func Eval(node ast.Node, env *Frame) Object {
 	case *ast.Block:
 		return evalStatements(e.Statements, env)
 	case *ast.Tuple:
-		return evalTuple(e, env)
+		return &Tuple{Fields: evalTuple(e, env)}
 
 	case *ast.AssignStatement:
 		evalAssignment(e, env)
@@ -36,6 +36,8 @@ func Eval(node ast.Node, env *Frame) Object {
 		return &Default{}
 	case *ast.Match:
 		return evalMatch(e, env)
+	case *ast.Indexor:
+		return evalIndexor(e, env)
 
 	case *ast.IntLiteral:
 		return &Int64{e.Value}
@@ -124,6 +126,15 @@ func evalCallExpression(c *ast.CallExpression, env *Frame) Object {
 			for _, o := range operands {
 				print(o.Inspect())
 			}
+		case "make":
+			t := operands[0].(*Type)
+			switch t.Kind {
+			case TypeArray:
+				return &Array{
+					Objects:  make([]Object, operands[1].(*Int64).Value),
+					ItemType: t.Spec[0].Type,
+				}
+			}
 		default:
 			return NULL
 		}
@@ -135,6 +146,13 @@ func evalAssignment(e *ast.AssignStatement, env *Frame) {
 	switch l := e.Left.(type) {
 	case *ast.Identifier:
 		env.Set(l.Name, Eval(e.Right, env))
+	case *ast.Indexor:
+		x := Eval(l.Expression, env)
+		t := Eval(l.Index, env).(*Tuple)
+		switch k := x.(type) {
+		case *Array:
+			k.Objects[t.Fields[0].Value.(*Int64).Value] = Eval(e.Right, env)
+		}
 	}
 }
 
@@ -198,13 +216,13 @@ func evalInfix(i *ast.Infix, operator token.Token, env *Frame) Object {
 	return NULL
 }
 
-func evalTuple(tuple *ast.Tuple, env *Frame) *Tuple {
-	t := Tuple{Fields: make([]Field, len(tuple.Statements))}
+func evalTuple(tuple *ast.Tuple, env *Frame) []Field {
+	f := make([]Field, len(tuple.Statements))
 	for i, stmt := range tuple.Statements {
 		switch s := stmt.(type) {
 		case *ast.AssignStatement:
 		case *ast.ExpressionStatement:
-			t.Fields[i] = Field{
+			f[i] = Field{
 				Name:  fmt.Sprintf("%d", i),
 				Value: Eval(s, env),
 			}
@@ -212,7 +230,7 @@ func evalTuple(tuple *ast.Tuple, env *Frame) *Tuple {
 			fmt.Printf("UNHANDLED TUPLE STATEMENT: %T\n", s)
 		}
 	}
-	return &t
+	return f
 }
 
 func evalSchema(tuple *ast.Tuple, env *Frame) []Field {
@@ -221,7 +239,10 @@ func evalSchema(tuple *ast.Tuple, env *Frame) []Field {
 		switch s := stmt.(type) {
 		case *ast.ExpressionStatement:
 			if e, ok := s.Expression.(*ast.As); ok {
-				fields = append(fields, Field{Name: e.Value.(*ast.Identifier).Name, Type: Eval(e.Type, env)})
+				fields = append(fields, Field{
+					Name: e.Value.(*ast.Identifier).Name,
+					Type: Eval(e.Type, env).(*Type),
+				})
 			}
 		default:
 			fmt.Printf("UNHANDLED STATEMENT IN SCHEMA: %T\n", s)
@@ -232,12 +253,21 @@ func evalSchema(tuple *ast.Tuple, env *Frame) []Field {
 
 func evalIndexor(i *ast.Indexor, env *Frame) Object {
 	e := Eval(i.Expression, env)
-	c := Eval(i.Index, env)
+	t := Eval(i.Index, env).(*Tuple)
 
 	switch k := e.(type) {
 	case *Array:
-
+		return k.Objects[t.Fields[0].Value.(*Int64).Value]
 	case *Factory:
+		switch k.Kind {
+		case TypeArray:
+			t := t.Fields[0].Value.(*Type)
+			return &Type{
+				Name: fmt.Sprintf("array[%s]", t.Name),
+				Kind: TypeArray,
+				Spec: []Field{{Name: "T", Type: &Type{Kind: TypeType}, Value: t}},
+			}
+		}
 	}
 
 	return NULL

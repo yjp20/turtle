@@ -1,5 +1,7 @@
 package interpreter
 
+//go:generate stringer -type=TypeKind
+
 type TypeKind int32
 
 const (
