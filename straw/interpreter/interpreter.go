@@ -46,11 +46,11 @@ func Eval(node ast.Node, env *Frame) Object {
 		return evalIndexor(e, env)
 
 	case *ast.IntLiteral:
-		return &Int64{e.Value}
+		return &I64{e.Value}
 	case *ast.StringLiteral:
 		return &String{e.Value}
 	case *ast.FloatLiteral:
-		return &Float64{e.Value}
+		return &F64{e.Value}
 	case *ast.RangeLiteral:
 		return evalRangeLiteral(e, env)
 	case *ast.Identifier:
@@ -84,7 +84,7 @@ func evalForStatement(fs *ast.ForStatement, env *Frame) Object {
 			switch rr := r.(type) {
 			case *Range:
 				for i := rr.Start; i < rr.End; i++ {
-					assign(s.Left, &Int64{Value: i}, env)
+					assign(s.Left, &I64{Value: i}, env)
 					Eval(fs.Expression, env)
 				}
 			}
@@ -159,7 +159,7 @@ func evalCallExpression(c *ast.CallExpression, env *Frame) Object {
 			switch t.Kind {
 			case TypeArray:
 				return &Array{
-					Objects:  make([]Object, operands[1].(*Int64).Value),
+					Objects:  make([]Object, operands[1].(*I64).Value),
 					ItemType: t.Spec[0].Type,
 				}
 			}
@@ -179,7 +179,7 @@ func assign(left ast.Node, obj Object, env *Frame) {
 		t := Eval(l.Index, env).(*Tuple)
 		switch k := x.(type) {
 		case *Array:
-			k.Objects[t.Fields[0].Value.(*Int64).Value] = obj
+			k.Objects[t.Fields[0].Value.(*I64).Value] = obj
 		}
 	}
 }
@@ -188,16 +188,16 @@ func evalInfix(i *ast.Infix, operator token.Token, env *Frame) Object {
 	l := Eval(i.Left, env)
 	r := Eval(i.Right, env)
 	switch l.(type) {
-	case *Int64:
-		ll := l.(*Int64)
-		rr := r.(*Int64)
+	case *I64:
+		ll := l.(*I64)
+		rr := r.(*I64)
 		switch operator {
 		case token.ADD:
-			return &Int64{Value: ll.Value + rr.Value}
+			return &I64{Value: ll.Value + rr.Value}
 		case token.MUL:
-			return &Int64{Value: ll.Value * rr.Value}
+			return &I64{Value: ll.Value * rr.Value}
 		case token.SUB:
-			return &Int64{Value: ll.Value - rr.Value}
+			return &I64{Value: ll.Value - rr.Value}
 		case token.LESS:
 			return &Bool{Value: ll.Value < rr.Value}
 		case token.LESS_EQUAL:
@@ -214,16 +214,16 @@ func evalInfix(i *ast.Infix, operator token.Token, env *Frame) Object {
 			fmt.Printf("UNHANDLED INFIX OPERATOR: %T\n", operator)
 			return NULL
 		}
-	case *Float64:
-		ll := l.(*Float64)
-		rr := r.(*Float64)
+	case *F64:
+		ll := l.(*F64)
+		rr := r.(*F64)
 		switch operator {
 		case token.ADD:
-			return &Float64{Value: ll.Value + rr.Value}
+			return &F64{Value: ll.Value + rr.Value}
 		case token.MUL:
-			return &Float64{Value: ll.Value * rr.Value}
+			return &F64{Value: ll.Value * rr.Value}
 		case token.SUB:
-			return &Float64{Value: ll.Value - rr.Value}
+			return &F64{Value: ll.Value - rr.Value}
 		case token.LESS:
 			return &Bool{Value: ll.Value < rr.Value}
 		case token.LESS_EQUAL:
@@ -245,8 +245,8 @@ func evalInfix(i *ast.Infix, operator token.Token, env *Frame) Object {
 }
 
 func evalRangeLiteral(rl *ast.RangeLiteral, env *Frame) *Range {
-	l := Eval(rl.Left, env).(*Int64).Value
-	r := Eval(rl.Right, env).(*Int64).Value
+	l := Eval(rl.Left, env).(*I64).Value
+	r := Eval(rl.Right, env).(*I64).Value
 	if !rl.LeftInclusive {
 		l += 1
 	}
@@ -297,7 +297,7 @@ func evalIndexor(i *ast.Indexor, env *Frame) Object {
 
 	switch k := e.(type) {
 	case *Array:
-		return k.Objects[t.Fields[0].Value.(*Int64).Value]
+		return k.Objects[t.Fields[0].Value.(*I64).Value]
 	case *Factory:
 		switch k.Kind {
 		case TypeArray:

@@ -12,11 +12,11 @@ func _() {
 	_ = x[TypeFrame-1]
 	_ = x[TypeDefault-2]
 	_ = x[TypeAny-3]
-	_ = x[TypeInt32-4]
-	_ = x[TypeInt64-5]
+	_ = x[TypeI32-4]
+	_ = x[TypeI64-5]
 	_ = x[TypeString-6]
 	_ = x[TypeBool-7]
-	_ = x[TypeFloat64-8]
+	_ = x[TypeF64-8]
 	_ = x[TypeFunction-9]
 	_ = x[TypeBuiltinFunction-10]
 	_ = x[TypeArray-11]
@@ -29,9 +29,9 @@ func _() {
 	_ = x[TypeFactory-18]
 }
 
-const _TypeKind_name = "TypeNullTypeFrameTypeDefaultTypeAnyTypeInt32TypeInt64TypeStringTypeBoolTypeFloat64TypeFunctionTypeBuiltinFunctionTypeArrayTypeSliceTypeStructTypeInterfaceTypeTupleTypeRangeTypeTypeTypeFactory"
+const _TypeKind_name = "TypeNullTypeFrameTypeDefaultTypeAnyTypeI32TypeI64TypeStringTypeBoolTypeF64TypeFunctionTypeBuiltinFunctionTypeArrayTypeSliceTypeStructTypeInterfaceTypeTupleTypeRangeTypeTypeTypeFactory"
 
-var _TypeKind_index = [...]uint8{0, 8, 17, 28, 35, 44, 53, 63, 71, 82, 94, 113, 122, 131, 141, 154, 163, 172, 180, 191}
+var _TypeKind_index = [...]uint8{0, 8, 17, 28, 35, 42, 49, 59, 67, 74, 86, 105, 114, 123, 133, 146, 155, 164, 172, 183}
 
 func (i TypeKind) String() string {
 	if i < 0 || i >= TypeKind(len(_TypeKind_index)-1) {

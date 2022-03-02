@@ -11,11 +11,11 @@ const (
 	TypeAny
 
 	// Primitives
-	TypeInt32
-	TypeInt64
+	TypeI32
+	TypeI64
 	TypeString
 	TypeBool
-	TypeFloat64
+	TypeF64
 	TypeFunction
 	TypeBuiltinFunction
 

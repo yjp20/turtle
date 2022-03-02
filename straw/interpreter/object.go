@@ -33,14 +33,14 @@ func NewFrame(parent *Frame) *Frame {
 
 func NewGlobalFrame() *Frame {
 	return &Frame{Values: map[string]Object{
-		"print":   &BuiltinFunction{Kind: "print"},
-		"debug":   &BuiltinFunction{Kind: "debug"},
-		"make":    &BuiltinFunction{Kind: "make"},
-		"int32":   &Type{Name: "int32", Kind: TypeInt32},
-		"int64":   &Type{Name: "int64", Kind: TypeInt64},
-		"bool":    &Type{Name: "bool", Kind: TypeBool},
-		"float64": &Type{Name: "float64", Kind: TypeFloat64},
-		"any":     &Type{Name: "any", Kind: TypeAny},
+		"print": &BuiltinFunction{Kind: "print"},
+		"debug": &BuiltinFunction{Kind: "debug"},
+		"make":  &BuiltinFunction{Kind: "make"},
+		"i32":   &Type{Name: "i32", Kind: TypeI32},
+		"i64":   &Type{Name: "i64", Kind: TypeI64},
+		"bool":  &Type{Name: "bool", Kind: TypeBool},
+		"f64":   &Type{Name: "f64", Kind: TypeF64},
+		"any":   &Type{Name: "any", Kind: TypeAny},
 		"array": &Factory{
 			Params: []Field{{Name: "T", Type: &Type{Kind: TypeType}}},
 			Kind:   TypeArray,
@@ -73,20 +73,20 @@ type Default struct{}
 func (d *Default) Type() TypeKind  { return TypeDefault }
 func (d *Default) Inspect() string { return "<default>" }
 
-type Int32 struct{ Value int32 }
+type I32 struct{ Value int32 }
 
-func (i *Int32) Type() TypeKind  { return TypeInt32 }
-func (i *Int32) Inspect() string { return fmt.Sprintf("<int32 %d>", i.Value) }
+func (i *I32) Type() TypeKind  { return TypeI32 }
+func (i *I32) Inspect() string { return fmt.Sprintf("<int32 %d>", i.Value) }
 
-type Int64 struct{ Value int64 }
+type I64 struct{ Value int64 }
 
-func (i *Int64) Type() TypeKind  { return TypeInt64 }
-func (i *Int64) Inspect() string { return fmt.Sprintf("<int64 %d>", i.Value) }
+func (i *I64) Type() TypeKind  { return TypeI64 }
+func (i *I64) Inspect() string { return fmt.Sprintf("<int64 %d>", i.Value) }
 
-type Float64 struct{ Value float64 }
+type F64 struct{ Value float64 }
 
-func (i *Float64) Type() TypeKind  { return TypeFloat64 }
-func (i *Float64) Inspect() string { return fmt.Sprintf("<float64 %f>", i.Value) }
+func (i *F64) Type() TypeKind  { return TypeF64 }
+func (i *F64) Inspect() string { return fmt.Sprintf("<float64 %f>", i.Value) }
 
 type Bool struct{ Value bool }
 
