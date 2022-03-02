@@ -1,8 +1,8 @@
-fibo: func (n int64) -> {
+fibo: λ (n int64) → {
 	a: .make array[int64] { n+1 }
 	a[0]: 0
 	a[1]: 1
-	for i each range[2..n] -> {
+	∀ i ∈ range[2‥n] → {
 		a[i]: a[i-2] + a[i-1]
 	}
 	a[n]

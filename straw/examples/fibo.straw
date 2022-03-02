@@ -1,9 +1,10 @@
-fibo: func (n int32) -> {
+fibo: λ (n i64) → {
 	match n {
-		0 => 0
-		1 => 1
-		_ => .fibo { n - 1 } + .fibo { n - 2 }
+		0 ⇒ 0
+		1 ⇒ 1
+		_ ⇒ .fibo { n - 1 } + .fibo { n - 2 }
 	}
 }
 
 .fibo 30
+

@@ -5,7 +5,7 @@ cli: import "cli"
 http: import "net/http"
 
 SomeFunction: λ (a i32, b i32) (i32, i32) → {
-	# ..
+	# ‥
 }
 
 # If else expressions
@@ -26,29 +26,29 @@ a = "hello" ⇒ {
 template :: "hello @"
 ∀ (i, c) ∈ template → print c
 
-# for based on int ranges
+# ∀ based on int ranges
 ∀ i ∈ range [0‥10) → print i
 ∀ i ∈ range [0‥9]  → print i
 ∀ i ∈ range (-1‥9] → print i
 
 # one clause loop i: 0
 ∀ i < 10 → {
-	# ...
+	# ‥.
 	i: i+1
 }
 
 # two clause loop
 i :: 0
 ∀ i<10; i :: i+1 → {
-	# ...
+	# ‥.
 }
 
 # three clause loop
 ∀ i::0; i<10; i::i+1 → {
-	# ...
+	# ‥.
 }
 
-# Parametrized functions
+# Parametrized λtions
 λ max [T type] (a T, b T) T → {
 	a > b ⇒ a ~ b
 }
@@ -92,7 +92,7 @@ reader: interface (
 
 # Type methods
 λ ReadAll (self *exampleStruct, a i32, b i32) {
-	#...
+	#‥.
 }
 
 v: &exampleStruct(
@@ -108,12 +108,12 @@ Map: struct [K type, V type] (
 )
 
 # Generic type methods work similar
-λ Iterate [K, V] (self *Map[K, V], func λ (K, V)) {
-	#...
+λ Iterate [K, V] (self *Map[K, V], λ λ (K, V)) {
+	#‥.
 }
 
 m: &Map[string, string]{}
-m.Iterate                     # Type inference works when function is called as a member of a function
+m.Iterate                     # Type inference works when λtion is called as a member of a λtion
 Map[string, string].Iterate m # Type inference
 Map.Iterate m                 # Type inference
 
@@ -124,14 +124,14 @@ Map.Iterate m                 # Type inference
 # even
 (x i32, y i32): F 2 3
 
-# Variadic function declaration
-λ Sum (list ..i32) i32 {
-	#...
+# Variadic λtion declaration
+λ Sum (list ‥i32) i32 {
+	#‥.
 }
 
 # Keyword arguments
 λ Ls (groupDirectories bool: false) i32 {
-	# ..
+	# ‥
 }
 
 # Match statement example
@@ -149,3 +149,4 @@ Map.Iterate m                 # Type inference
 kill: Channel[i32]{}
 kill ← 10
 v: ←kill
+

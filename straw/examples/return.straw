@@ -1,5 +1,5 @@
-fibo: func (i int64) -> {
-	i = 10 => return 100
+fibo: λ (i int64) → {
+	i = 10 ⇒ return 100
 	i
 }
 
