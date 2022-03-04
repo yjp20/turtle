@@ -1,0 +1,7 @@
+Printf: func [template string] (..args any) -> {
+	.print { .Sprintf[template] ..args }
+}
+
+Sprintf: func [template string] (..args any) -> {
+
+}

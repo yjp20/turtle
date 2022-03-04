@@ -461,7 +461,7 @@ func (p *Parser) consumeFunctionDefinition() *ast.FunctionDefinition {
 	if p.tok != token.RIGHT_ARROW {
 		fd.Return = p.parseAtomicExpression()
 	}
-	if p.tok != token.RIGHT_ARROW {
+	if p.tok == token.RIGHT_ARROW {
 		p.consume(token.RIGHT_ARROW)
 		fd.Body = p.parseStatement()
 	}

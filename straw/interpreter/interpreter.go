@@ -9,7 +9,7 @@ import (
 
 // Basic tree walk interpreter implementation
 
-func Eval(node ast.Node, env *Frame) Object {
+func Eval(node ast.Node, env *FunctionFrame) Object {
 	if env.Return != nil {
 		return NULL
 	}
@@ -65,7 +65,7 @@ func Eval(node ast.Node, env *Frame) Object {
 	return NULL
 }
 
-func evalStatements(stmts []ast.Statement, env *Frame) Object {
+func evalStatements(stmts []ast.Statement, env *FunctionFrame) Object {
 	var last Object = NULL
 	for _, stmt := range stmts {
 		switch stmt.(type) {
@@ -77,7 +77,7 @@ func evalStatements(stmts []ast.Statement, env *Frame) Object {
 	return last
 }
 
-func evalForStatement(fs *ast.ForStatement, env *Frame) Object {
+func evalForStatement(fs *ast.ForStatement, env *FunctionFrame) Object {
 	if len(fs.Clauses) == 1 {
 		if s, ok := fs.Clauses[0].(*ast.EachStatement); ok {
 			r := Eval(s.Right, env)
@@ -93,7 +93,7 @@ func evalForStatement(fs *ast.ForStatement, env *Frame) Object {
 	return NULL
 }
 
-func evalFunctionDefinition(fd *ast.FunctionDefinition, env *Frame) Object {
+func evalFunctionDefinition(fd *ast.FunctionDefinition, env *FunctionFrame) Object {
 	f := &Function{Body: fd.Body}
 	if fd.Identifier != nil {
 		f.Name = fd.Identifier.Name
@@ -103,7 +103,7 @@ func evalFunctionDefinition(fd *ast.FunctionDefinition, env *Frame) Object {
 	return f
 }
 
-func evalIf(i *ast.If, env *Frame) Object {
+func evalIf(i *ast.If, env *FunctionFrame) Object {
 	c := Eval(i.Conditional, env).(*Bool)
 	if c.Value {
 		return Eval(i.True, env)
@@ -114,7 +114,7 @@ func evalIf(i *ast.If, env *Frame) Object {
 	return NULL
 }
 
-func evalMatch(m *ast.Match, env *Frame) Object {
+func evalMatch(m *ast.Match, env *FunctionFrame) Object {
 	o := Eval(m.Item, env)
 	for i := range m.Conditions {
 		c := Eval(m.Conditions[i], env)
@@ -125,13 +125,13 @@ func evalMatch(m *ast.Match, env *Frame) Object {
 	return NULL
 }
 
-func evalCallExpression(c *ast.CallExpression, env *Frame) Object {
+func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 	objs := make([]Object, len(c.Expressions))
 	for i, expr := range c.Expressions {
 		objs[i] = Eval(expr, env)
 	}
 
-	frame := NewFrame(env)
+	frame := NewFunctionFrame(env)
 	operator := objs[0]
 	operands := objs[1:]
 	switch e := operator.(type) {
@@ -170,7 +170,7 @@ func evalCallExpression(c *ast.CallExpression, env *Frame) Object {
 	return NULL
 }
 
-func assign(left ast.Node, obj Object, env *Frame) {
+func assign(left ast.Node, obj Object, env *FunctionFrame) {
 	switch l := left.(type) {
 	case *ast.Identifier:
 		env.Set(l.Name, obj)
@@ -181,10 +181,19 @@ func assign(left ast.Node, obj Object, env *Frame) {
 		case *Array:
 			k.Objects[t.Fields[0].Value.(*I64).Value] = obj
 		}
+	case *ast.Tuple:
+		for i, s := range l.Statements {
+			switch st := s.(type) {
+			case *ast.ExpressionStatement:
+				assign(st.Expression.(*ast.Identifier), obj.(*Tuple).Fields[i].Value, env)
+			default:
+				// TODO: ERORR?
+			}
+		}
 	}
 }
 
-func evalInfix(i *ast.Infix, operator token.Token, env *Frame) Object {
+func evalInfix(i *ast.Infix, operator token.Token, env *FunctionFrame) Object {
 	l := Eval(i.Left, env)
 	r := Eval(i.Right, env)
 	switch l.(type) {
@@ -244,7 +253,7 @@ func evalInfix(i *ast.Infix, operator token.Token, env *Frame) Object {
 	return NULL
 }
 
-func evalRangeLiteral(rl *ast.RangeLiteral, env *Frame) *Range {
+func evalRangeLiteral(rl *ast.RangeLiteral, env *FunctionFrame) *Range {
 	l := Eval(rl.Left, env).(*I64).Value
 	r := Eval(rl.Right, env).(*I64).Value
 	if !rl.LeftInclusive {
@@ -256,15 +265,17 @@ func evalRangeLiteral(rl *ast.RangeLiteral, env *Frame) *Range {
 	return &Range{Start: l, End: r}
 }
 
-func evalTuple(tuple *ast.Tuple, env *Frame) []Field {
+func evalTuple(tuple *ast.Tuple, env *FunctionFrame) []Field {
 	f := make([]Field, len(tuple.Statements))
 	for i, stmt := range tuple.Statements {
 		switch s := stmt.(type) {
 		case *ast.AssignStatement:
 		case *ast.ExpressionStatement:
+			o := Eval(s, env)
 			f[i] = Field{
 				Name:  fmt.Sprintf("%d", i),
-				Value: Eval(s, env),
+				Type:  &Type{Kind: o.Type()},
+				Value: o,
 			}
 		default:
 			fmt.Printf("UNHANDLED TUPLE STATEMENT: %T\n", s)
@@ -273,7 +284,7 @@ func evalTuple(tuple *ast.Tuple, env *Frame) []Field {
 	return f
 }
 
-func evalSchema(tuple *ast.Tuple, env *Frame) []Field {
+func evalSchema(tuple *ast.Tuple, env *FunctionFrame) []Field {
 	fields := make([]Field, 0)
 	for _, stmt := range tuple.Statements {
 		switch s := stmt.(type) {
@@ -291,7 +302,7 @@ func evalSchema(tuple *ast.Tuple, env *Frame) []Field {
 	return fields
 }
 
-func evalIndexor(i *ast.Indexor, env *Frame) Object {
+func evalIndexor(i *ast.Indexor, env *FunctionFrame) Object {
 	e := Eval(i.Expression, env)
 	t := Eval(i.Index, env).(*Tuple)
 

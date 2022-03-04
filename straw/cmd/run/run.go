@@ -27,6 +27,7 @@ func main() {
 	}
 
 	env := interpreter.NewGlobalFrame()
-	eval := interpreter.Eval(pg, env)
+	frame := interpreter.NewFunctionFrame(env)
+	eval := interpreter.Eval(pg, frame)
 	println(eval.Inspect())
 }

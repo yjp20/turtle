@@ -1,6 +1,0 @@
-f: λ (a i64, b i64) → (a+b, a-b)
-
-(j, k): .f 10 3
-
-.debug j
-.debug k

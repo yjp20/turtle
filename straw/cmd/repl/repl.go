@@ -16,6 +16,7 @@ var PROMPT = ">>> "
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	env := interpreter.NewGlobalFrame()
+	frame := interpreter.NewFunctionFrame(env)
 
 	for {
 		fmt.Fprintf(os.Stdout, PROMPT)
@@ -36,7 +37,7 @@ func main() {
 			continue
 		}
 
-		eval := interpreter.Eval(pg, env)
+		eval := interpreter.Eval(pg, frame)
 		println(eval.Inspect())
 	}
 }

@@ -1,7 +1,0 @@
-fibo: λ (i int64) → {
-	i = 10 ⇒ return 100
-	i
-}
-
-.debug { .fibo 1 }
-.debug { .fibo 10 }

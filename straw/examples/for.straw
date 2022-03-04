@@ -1,8 +1,0 @@
-.print "[0‥4]"
-∀ i ∈ range[0‥4] → .debug i
-.print "[0‥4)"
-∀ i ∈ range[0‥4) → .debug i
-.print "(0‥4]"
-∀ i ∈ range(0‥4] → .debug i
-.print "(0‥4)"
-∀ i ∈ range(0‥4) → .debug i

@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/yjp20/turtle/straw/ast"
@@ -17,51 +16,6 @@ type Object interface {
 	Type() TypeKind
 	Inspect() string
 }
-
-type Frame struct {
-	Parent *Frame
-	Values map[string]Object
-	Return Object
-}
-
-func NewFrame(parent *Frame) *Frame {
-	return &Frame{
-		Parent: parent,
-		Values: make(map[string]Object),
-	}
-}
-
-func NewGlobalFrame() *Frame {
-	return &Frame{Values: map[string]Object{
-		"print": &BuiltinFunction{Kind: "print"},
-		"debug": &BuiltinFunction{Kind: "debug"},
-		"make":  &BuiltinFunction{Kind: "make"},
-		"i32":   &Type{Name: "i32", Kind: TypeI32},
-		"i64":   &Type{Name: "i64", Kind: TypeI64},
-		"bool":  &Type{Name: "bool", Kind: TypeBool},
-		"f64":   &Type{Name: "f64", Kind: TypeF64},
-		"any":   &Type{Name: "any", Kind: TypeAny},
-		"array": &Factory{
-			Params: []Field{{Name: "T", Type: &Type{Kind: TypeType}}},
-			Kind:   TypeArray,
-		},
-	}}
-}
-
-func (f *Frame) Get(selector string) Object {
-	if _, ok := f.Values[selector]; ok {
-		return f.Values[selector]
-	}
-	if f.Parent != nil {
-		return f.Parent.Get(selector)
-	}
-	return NULL
-}
-func (f *Frame) Set(selector string, obj Object) {
-	f.Values[selector] = obj
-}
-func (f *Frame) Type() TypeKind  { return TypeFrame }
-func (f *Frame) Inspect() string { b, _ := json.MarshalIndent(f, "", "| "); return string(b) }
 
 type Null struct{}
 
