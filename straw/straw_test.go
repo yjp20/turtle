@@ -75,7 +75,7 @@ var tests = []Test{
 	},
 	{
 		"tuple",
-		`f: func (a i64, b i64) -> (a+b, a-b)
+		`f: λ (a i64, b i64) → (a+b, a-b)
 		(x, y): .f 8 2
 		(y, x)`,
 		&interpreter.Tuple{
@@ -129,11 +129,46 @@ var tests = []Test{
 		.fibo 40`,
 		&interpreter.I64{Value: 102334155},
 	},
+	{
+		"variadic function",
+		`add: λ (..numbers i64) → {
+			j: 0
+			for k each numbers {
+				j: j + k
+			}
+			j
+		}
+		.add 1 2 3 4`,
+		&interpreter.I64{Value: 10},
+	},
+	{
+		"variadic function 0 args",
+		`add: λ (..numbers i64) → {
+			j: 0
+			for k each numbers {
+				j: j + k
+			}
+			j
+		}
+		.add`,
+		&interpreter.I64{Value: 0},
+	},
+	{
+		"default argument functions",
+		`f: λ (n i64: 40) → n
+		.f`,
+		&interpreter.I64{Value: 40},
+	},
+	{
+		"array constructor",
+		`■ array[i64] (1,2,3,4,5)`,
+		interpreter.NULL,
+	},
 }
 
 func TestStraw(t *testing.T) {
 	for _, test := range tests {
-	e := []error{}
+		e := []error{}
 		c := Filter([]byte(test.in))
 		p := parser.NewParser(c, e)
 		t := p.ParseProgram()

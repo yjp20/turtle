@@ -7,9 +7,10 @@ import (
 )
 
 type Field struct {
-	Name  string
-	Type  *Type
-	Value Object
+	Name   string
+	Type   *Type
+	Value  Object
+	Spread bool
 }
 
 type Object interface {
@@ -110,8 +111,15 @@ type Array struct {
 	ItemType *Type
 }
 
-func (a *Array) Type() TypeKind  { return TypeArray }
-func (a *Array) Inspect() string { return "<array[]>" }
+func (a *Array) Type() TypeKind { return TypeArray }
+func (a *Array) Inspect() string {
+	s := "<array ["
+	for _, obj := range a.Objects {
+		s += obj.Inspect()
+	}
+	s += "]>"
+	return s
+}
 
 type Range struct {
 	Start int64

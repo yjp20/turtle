@@ -87,6 +87,11 @@ func evalForStatement(fs *ast.ForStatement, env *FunctionFrame) Object {
 					assign(s.Left, &I64{Value: i}, env)
 					Eval(fs.Expression, env)
 				}
+			case *Array:
+				for _, item := range rr.Objects {
+					assign(s.Left, item, env)
+					Eval(fs.Expression, env)
+				}
 			}
 		}
 	}
@@ -136,8 +141,22 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 	operands := objs[1:]
 	switch e := operator.(type) {
 	case *Function:
-		for i, o := range operands {
-			frame.Set(e.Args[i].Name, o)
+		for i := range e.Args {
+			if e.Args[i].Spread {
+				frame.Set(e.Args[i].Name, &Array{
+					Objects: operands[i:],
+					ItemType: &Type{
+						Kind: TypeArray,
+						Spec: []Field{{Name: "T", Type: e.Args[i].Type}},
+					},
+				})
+			} else {
+				if len(operands) <= i {
+					frame.Set(e.Args[i].Name, e.Args[i].Value)
+				} else {
+					frame.Set(e.Args[i].Name, operands[i])
+				}
+			}
 		}
 		last := Eval(e.Body, frame)
 		if frame.Return != nil {
@@ -287,16 +306,48 @@ func evalTuple(tuple *ast.Tuple, env *FunctionFrame) []Field {
 func evalSchema(tuple *ast.Tuple, env *FunctionFrame) []Field {
 	fields := make([]Field, 0)
 	for _, stmt := range tuple.Statements {
+		var (
+			nameExpression ast.Expression
+			typeExpression ast.Expression
+			defaultValue   Object
+		)
+
 		switch s := stmt.(type) {
+		case *ast.AssignStatement:
+			nameExpression = s.Left.(*ast.As).Value
+			typeExpression = s.Left.(*ast.As).Type
+			defaultValue = Eval(s.Right, env)
 		case *ast.ExpressionStatement:
-			if e, ok := s.Expression.(*ast.As); ok {
-				fields = append(fields, Field{
-					Name: e.Value.(*ast.Identifier).Name,
-					Type: Eval(e.Type, env).(*Type),
-				})
-			}
+			nameExpression = s.Expression.(*ast.As).Value
+			typeExpression = s.Expression.(*ast.As).Type
 		default:
 			fmt.Printf("UNHANDLED STATEMENT IN SCHEMA: %T\n", s)
+		}
+
+		var resolvedType *Type
+		if ot, ok := Eval(typeExpression, env).(*Type); ok {
+			resolvedType = ot
+		} else {
+			// TODO Error
+		}
+
+		switch c := nameExpression.(type) {
+		case *ast.Spread:
+			fields = append(fields, Field{
+				Name:   c.Expression.(*ast.Identifier).Name,
+				Type:   resolvedType,
+				Value:  defaultValue,
+				Spread: true,
+			})
+		case *ast.Identifier:
+			fields = append(fields, Field{
+				Name:   c.Name,
+				Type:   resolvedType,
+				Value:  defaultValue,
+				Spread: false,
+			})
+		default:
+			// TODO: Error
 		}
 	}
 	return fields
