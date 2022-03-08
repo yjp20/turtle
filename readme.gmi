@@ -6,7 +6,7 @@ First and foremost, turtle is a hobby operating system. As a consequence, it nee
 
 Second, I want to keep things simple. turtle should be an operating system that pays careful attention to the cost of abstractions, not only their benefits.
 
-Third, I want to reexamine old, but time-tested abstractions and see if I can do better. Even if I can't, this will certainly give me an appreciation for their elegance (or atleast their imprortance).
+Third, I want to reexamine old, but time-tested abstractions and see if I can do better.
 
 Beyond these abstract goals, there's a few concrete ideas that I want to incorporate into turtle, which I will detail in the sections below.
 
@@ -14,13 +14,13 @@ Beyond these abstract goals, there's a few concrete ideas that I want to incorpo
 
 turtle as an operating system is inseparable from the language that was designed for it, straw. All programs, including the kernel should be able to be written in straw. Many existing general-purpose languages are capable of being used in this manner. A far more bold requirement for straw is that it needs to be a reasonable language to use as the interactive shell for turtle.
 
-Because of this requirement, it doesn't really make sense for the computer to be configured into running discrete binaries as in unix. In the unix way, we use C to create binaries, which are then composed together using a shell. Shell utilties are versatile since they act entirely on files, or essentially strings. In this tradeoff, we lose some of the rigor of functions and types which can help guide us in creating correct programs.
+Because of this requirement, it doesn't really make sense for the computer to be configured into running discrete binaries as in unix. In the unix way, we use C to create binaries, which are then composed together using a shell. Shell utilties are versatile since they act entirely on files, or essentially strings. It was also somewhat necessary, because the input/output abstraction encouraged the creation of programs that used very little memory. This isn't a constraint that is super relevant anymore on modern systems.
 
-Some new projects such as nushell attempts to get around this with a stricter data type for its commands. This is not a bad solution, but if we're going to go there, why not just use a programming language with auto complete and the niceties that come with it?
+However, we do lose the rigor of types which can help guide us in creating correct programs. Some new projects such as nushell attempts to get around this by adding typing to commands. This is a pretty good compromise for the unix world, but if we're creating an operating system from scratch, we can surely do better. In an ideal world, the shell is just as pleasant to use as modern IDEs, with full type checking.
 
-Ultimately, I want to see if it is possible to remove the shell and unify everything under one programming language, where individual programs do not exist, only libraries.
+Ultimately, I want to see if it is possible to remove the "shell" as we know today and unify everything under one programming language, where individual programs do not exist, only libraries. Instead of the shell, there will really just be an interpreted version of straw, along with loadable compiled versions.
 
-One of the problems with this, however, is that using a language in these various ways strains the focus of the language and it's effectiveness at any one task. This is why DSLs exist. This is an inherent problem that cannot be "solved", but nevertheless I have some ideas that will hopefully make it a much better experience.
+One of the problems with this, however, is that abusing a language in these different ways strains the language's focus and effectiveness at any one task. This is why DSLs exist. This is an inherent problem that cannot be "solved", but nevertheless I have some ideas that will hopefully make a decent compromise.
 
 ### universal terminal
 
@@ -32,15 +32,11 @@ But this is a case of "worse is better". While using graphical displays to emula
 
 To replace the old scroll-of-text, keeping in mind the good limitations are important. We can remove these limitations whilst still encouraging their outcome.
 
-I have a pretty good image of what I want my version of the terminal to look like, but I have a tough time describing it. I think the best analog is to the plan9 acme text editor, which was designed in such a way that it could serve almost all purposes.
-
-Even though the plan9 developers are legendary and will be undoubtably hard to beat, I think I can do better.
+I have a pretty good image of what I want my version of the terminal to look like, but I have a tough time describing it. In essence, I want to create a scroll of graphical elements, not just text. Then, when we go into an application that necessarily requires control of the entire window like vim, then we temporarily hide the scroll. I think the best analog is to the plan9 acme text editor, which was designed in such a way that it could serve almost all purposes.
 
 ### accessible resources
 
-Data is one of the fundamental concerns in a computing system. A general approach to data is important to the integrity of an operating system.
-
-As in plan9, stateful resources should be mapped to the filesystem under a namespace, like processes, network, audio, etc. Even something like the data in a git repository should be mapped as a filesystem. One problem with files is that they have an implicitly defined format. File name extensions can help with specification, but are insufficient as they are mostly hints. To "fix" this problem, all files that are specified internally within turtle should be written in straw's serialization format, which is built into the language. This serialization format should have an interchangable human readable mode and optimized binary format.
+Data and access to data is one of the fundamental concerns of a computing system. As in plan9, stateful resources should be mapped to the filesystem under a namespace, like processes, network, audio, etc. Even something like the data in a git repository should be mapped as a filesystem. One problem with files is that they have an implicitly defined format. File name extensions can help with specification, but are insufficient as they are mostly hints. To "fix" this problem, all files that are specified internally within turtle should be written in straw's serialization format, which is built into the language. This serialization format should have an interchangable human readable mode and optimized binary format.
 
 ## motivations
 
