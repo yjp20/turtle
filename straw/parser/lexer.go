@@ -17,11 +17,11 @@ type Lexer struct {
 	begin     int
 	end       int
 	ch        rune
-	errors    []error
+	errors    *[]error
 	semicolon bool
 }
 
-func NewLexer(source []byte, errors []error) *Lexer {
+func NewLexer(source []byte, errors *[]error) *Lexer {
 	l := &Lexer{source: source, errors: errors}
 	l.readRune()
 	return l
@@ -157,7 +157,7 @@ func (l *Lexer) Next() (token.Token, token.Pos, string) {
 		return token.DEFAULT, pos, "_"
 	}
 
-	l.errors = append(l.errors, fmt.Errorf("Invalid token at pos: %d", int(pos)))
+	*l.errors = append(*l.errors, fmt.Errorf("[lexer] Invalid token at pos: %d", int(pos)))
 	return token.ILLEGAL, pos, string(ch)
 }
 
@@ -229,7 +229,7 @@ func (l *Lexer) readStringLiteral() string {
 		}
 	}
 	if !valid {
-		l.errors = append(l.errors, fmt.Errorf("Expected string to be terminated before EOF"))
+		*l.errors = append(*l.errors, fmt.Errorf("[lexer] Expected string to be terminated before EOF"))
 	}
 	return string(l.source[begin:l.begin])
 }
@@ -249,7 +249,7 @@ func (l *Lexer) readRuneLiteral() string {
 		}
 	}
 	if !valid {
-		l.errors = append(l.errors, fmt.Errorf("Expected rune literal to be terminated before EOF"))
+		*l.errors = append(*l.errors, fmt.Errorf("[lexer] Expected rune literal to be terminated before EOF"))
 	}
 	return string(l.source[begin:l.begin])
 }

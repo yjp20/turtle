@@ -54,9 +54,10 @@ func (s *String) Type() TypeKind  { return TypeString }
 func (s *String) Inspect() string { return fmt.Sprintf("\"%s\"", s.Value) }
 
 type Function struct {
-	Name string
-	Args []Field
-	Body ast.Statement
+	Name  string
+	Args  []Field
+	Body  ast.Statement
+	Frame *FunctionFrame
 }
 
 func (f *Function) Type() TypeKind  { return TypeFunction }

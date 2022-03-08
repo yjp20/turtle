@@ -99,7 +99,7 @@ func evalForStatement(fs *ast.ForStatement, env *FunctionFrame) Object {
 }
 
 func evalFunctionDefinition(fd *ast.FunctionDefinition, env *FunctionFrame) Object {
-	f := &Function{Body: fd.Body}
+	f := &Function{Body: fd.Body, Frame: env}
 	if fd.Identifier != nil {
 		f.Name = fd.Identifier.Name
 		env.Set(f.Name, f)
@@ -136,11 +136,11 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 		objs[i] = Eval(expr, env)
 	}
 
-	frame := NewFunctionFrame(env)
 	operator := objs[0]
 	operands := objs[1:]
 	switch e := operator.(type) {
 	case *Function:
+		frame := NewFunctionFrame(e.Frame)
 		for i := range e.Args {
 			if e.Args[i].Spread {
 				frame.Set(e.Args[i].Name, &Array{

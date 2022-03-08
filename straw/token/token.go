@@ -56,18 +56,19 @@ const (
 	RIGHT_ARROW // →
 	OPTIONAL    // ?
 
-	FUNC     // λ
-	FOR      // ∀
-	EACH     // ∈
-	THEN     // ⇒
-	ELSE     // ~
-	BREAK    // break
-	CONTINUE // continue
-	RETURN   // return
-	DEFAULT  // _
-	GO       // go
-	SELECT   // select
-	MATCH    // match
+	FUNC      // λ
+	FOR       // ∀
+	EACH      // ∈
+	THEN      // ⇒
+	ELSE      // ~
+	CONSTRUCT // ■
+	BREAK     // break
+	CONTINUE  // continue
+	RETURN    // return
+	DEFAULT   // _
+	GO        // go
+	SELECT    // select
+	MATCH     // match
 
 	MUTABLE      // μ
 	COMPILE_TIME // σ
@@ -86,6 +87,8 @@ func Lookup(lit string) Token {
 		return MUTABLE
 	case "σ":
 		return COMPILE_TIME
+	case "■":
+		return CONSTRUCT
 
 	case "true":
 		return TRUE

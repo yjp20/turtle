@@ -26,7 +26,7 @@ func main() {
 		}
 		errors := make([]error, 0)
 		line := scanner.Bytes()
-		p := parser.NewParser(straw.Filter(line), errors)
+		p := parser.NewParser(straw.Filter(line), &errors)
 		pg := p.ParseProgram()
 
 		if len(errors) != 0 {

@@ -1,9 +1,7 @@
 package straw
 
 import (
-	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/yjp20/turtle/straw/ast"
@@ -12,9 +10,10 @@ import (
 )
 
 type Test struct {
-	name string
-	in   string
-	out  interpreter.Object
+	name        string
+	in          string
+	out         interpreter.Object
+	shouldError bool
 }
 
 var tests = []Test{
@@ -22,56 +21,71 @@ var tests = []Test{
 		"order of operations",
 		`1 + 2 * 3 + 4`,
 		&interpreter.I64{Value: 11},
+		false,
 	},
 	{
 		"match",
 		`k: 3
 		match k {
-			3 => 5
-			2 => 5
-			_ => 7
+			3 ⇒ 5
+			2 ⇒ 5
+			_ ⇒ 7
 		}`,
 		&interpreter.I64{Value: 5},
+		false,
 	},
 	{
 		"match default",
 		`k: 10
 		match k {
-			3 => 5
-			2 => 5
-			_ => 7
+			3 ⇒ 5
+			2 ⇒ 5
+			_ ⇒ 7
 		}`,
 		&interpreter.I64{Value: 7},
+		false,
+	},
+	{
+		"closures",
+		`λ f (x i64) → λ g (y i64) → x + y
+		.{ .f 3 } 5`,
+		&interpreter.I64{Value: 8},
+		false,
 	},
 	{
 		"if true",
 		`k: 3
-		k = 3 => 1 ~ 2`,
+		k = 3 ⇒ 1 ~ 2`,
 		&interpreter.I64{Value: 1},
+		false,
 	},
 	{
 		"if false",
 		`k: 1
-		k = 3 => 1 ~ 2`,
+		k = 3 ⇒ 1 ~ 2`,
 		&interpreter.I64{Value: 2},
+		false,
 	},
 	{
 		"if chain true false",
 		`j: 1, k: 3
-		j = 1 => 3 ~ k = 2 => 4 ~ 5`,
+		j = 1 ⇒ 3 ~ k = 2 ⇒ 4 ~ 5`,
 		&interpreter.I64{Value: 3},
+		false,
 	},
 	{
 		"if chain false true",
 		`j: 0, k: 2
-		j = 1 => 3 ~ k = 2 => 4 ~ 5`,
+		j = 1 ⇒ 3 ~ k = 2 ⇒ 4 ~ 5`,
 		&interpreter.I64{Value: 4},
+		false,
 	},
 	{
 		"if chain false false",
 		`j: 0, k: 3
-		j = 1 => 3 ~ k = 2 => 4 ~ 5`,
+		j = 1 ⇒ 3 ~ k = 2 ⇒ 4 ~ 5`,
 		&interpreter.I64{Value: 5},
+		false,
 	},
 	{
 		"tuple",
@@ -84,6 +98,7 @@ var tests = []Test{
 				{Name: "1", Type: &interpreter.Type{Kind: interpreter.TypeI64}, Value: &interpreter.I64{Value: 10}},
 			},
 		},
+		false,
 	},
 	{
 		"return 1",
@@ -93,6 +108,7 @@ var tests = []Test{
 		}
 		.f 10`,
 		&interpreter.I64{Value: 100},
+		false,
 	},
 	{
 		"return 2",
@@ -102,6 +118,7 @@ var tests = []Test{
 		}
 		.f 1`,
 		&interpreter.I64{Value: 1},
+		false,
 	},
 	{
 		"fibo recursive 20",
@@ -114,6 +131,7 @@ var tests = []Test{
 		}
 		.fibo 20`,
 		&interpreter.I64{Value: 6765},
+		false,
 	},
 	{
 		"fibo array 40",
@@ -128,63 +146,71 @@ var tests = []Test{
 		}
 		.fibo 40`,
 		&interpreter.I64{Value: 102334155},
+		false,
 	},
 	{
 		"variadic function",
-		`add: λ (..numbers i64) → {
+		`add: λ (‥numbers i64) → {
 			j: 0
-			for k each numbers {
+			∀ k ∈ numbers → {
 				j: j + k
 			}
 			j
 		}
 		.add 1 2 3 4`,
 		&interpreter.I64{Value: 10},
+		false,
 	},
 	{
 		"variadic function 0 args",
-		`add: λ (..numbers i64) → {
+		`add: λ (‥numbers i64) → {
 			j: 0
-			for k each numbers {
+			∀ k ∈ numbers → {
 				j: j + k
 			}
 			j
 		}
 		.add`,
 		&interpreter.I64{Value: 0},
+		false,
 	},
 	{
 		"default argument functions",
 		`f: λ (n i64: 40) → n
 		.f`,
 		&interpreter.I64{Value: 40},
+		false,
 	},
 	{
 		"array constructor",
 		`■ array[i64] (1,2,3,4,5)`,
 		interpreter.NULL,
+		false,
 	},
 }
 
 func TestStraw(t *testing.T) {
 	for _, test := range tests {
-		e := []error{}
-		c := Filter([]byte(test.in))
-		p := parser.NewParser(c, e)
-		t := p.ParseProgram()
-		g := interpreter.NewGlobalFrame()
-		f := interpreter.NewFunctionFrame(g)
-		o := interpreter.Eval(t, f)
-		if reflect.DeepEqual(o, test.out) {
-			fmt.Printf("PASS %s\n", test.name)
-		} else {
-			fmt.Printf("FAIL %s\n", test.name)
-			fmt.Println(strings.Replace(string(c), "\n\t\t", "\n", -1))
-			ast.Print(t)
-			if len(e) != 0 {
-				fmt.Println(e)
+		t.Run(test.name, func(t *testing.T) {
+			errors := []error{}
+			sp := parser.NewParser([]byte(test.in), &errors)
+			if len(errors) != 0 && !test.shouldError {
+				t.Errorf("Didn't expect to error, got errors '%v'", errors)
+				return
 			}
-			fmt.Printf(" expected: %s\n got: %s\n", test.out.Inspect(), o.Inspect())
-		}
+			if len(errors) == 0 && test.shouldError {
+				t.Errorf("Expected error, but parser didn't throw any")
+				return
+			}
+
+			tree := sp.ParseProgram()
+			global := interpreter.NewGlobalFrame()
+			frame := interpreter.NewFunctionFrame(global)
+			object := interpreter.Eval(tree, frame)
+
+			if !reflect.DeepEqual(object, test.out) {
+				t.Errorf("expected: %s  got: %s\nast: %s\n", test.out.Inspect(), object.Inspect(), ast.Sprint(tree))
+			}
+		})
 	}
 }
