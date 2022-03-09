@@ -38,7 +38,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 		Statements: p.parseStatements(),
 	}
 	if p.tok != token.EOF {
-		*p.errors = append(*p.errors, fmt.Errorf("Didn't consume all tokens in the lexer"))
+		p.appendError("Didn't consume all tokens in the lexer", p.pos, p.pos)
 	}
 	return program
 }
@@ -393,7 +393,7 @@ func (p *Parser) consumeRangeLiteral() *ast.RangeLiteral {
 		rl.LeftInclusive = true
 		p.consume(token.LEFT_BRACK)
 	default:
-		*p.errors = append(*p.errors, fmt.Errorf("[parser] Expected to range literal to have either '[' or '(' to start the range"))
+		p.appendError("Expected to range literal to have either '[' or '(' to start the range", p.pos, p.pos+1)
 	}
 
 	rl.Left = p.parseAtomicExpression()
@@ -408,7 +408,7 @@ func (p *Parser) consumeRangeLiteral() *ast.RangeLiteral {
 		rl.RightInclusive = true
 		p.consume(token.RIGHT_BRACK)
 	default:
-		*p.errors = append(*p.errors, fmt.Errorf("[parser] Expected to range literal to have either ')' or ']' to end the range"))
+		p.appendError("Expected to range literal to have either ']' or ')' to end the range", p.pos, p.pos+1)
 	}
 	return rl
 }
@@ -513,7 +513,11 @@ func (p *Parser) consumeCommentGroup() *ast.CommentGroup {
 
 func (p *Parser) consume(tok token.Token) token.Pos {
 	if p.tok != tok {
-		*p.errors = append(*p.errors, fmt.Errorf("[parser] Expected '%s' got '%s'", tok.String(), p.tok.String()))
+		p.appendError(
+			fmt.Sprintf("Expected '%s' got '%s'", tok.String(), p.tok.String()),
+			p.pos,
+			p.pos+token.Pos(len(p.lit)),
+		)
 		return NoPos
 	}
 	p.next()
@@ -524,4 +528,12 @@ func (p *Parser) consumeSemi() {
 	if p.tok == token.SEMICOLON || p.tok == token.COMMA {
 		p.consume(p.tok)
 	}
+}
+
+func (p *Parser) appendError(msg string, pos token.Pos, end token.Pos) {
+	*p.errors = append(*p.errors, StrawError{
+		msg: "[parser] " + msg,
+		pos: pos,
+		end: end,
+	})
 }

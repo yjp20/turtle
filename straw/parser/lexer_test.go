@@ -21,7 +21,7 @@ func expect(l *Lexer, t *testing.T, tok token.Token, lit string) {
 
 func TestLexer(t *testing.T) {
 	errors := []error{}
-	l := NewLexer(source, errors)
+	l := NewLexer(source, &errors)
 	for {
 		tok, _, lit := l.Next()
 		if lit == "\n" {

@@ -187,6 +187,12 @@ var tests = []Test{
 		interpreter.NULL,
 		false,
 	},
+	{
+		"basic parser error",
+		`hello why dude`,
+		interpreter.NULL,
+		true,
+	},
 }
 
 func TestStraw(t *testing.T) {
@@ -194,22 +200,22 @@ func TestStraw(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			errors := []error{}
 			sp := parser.NewParser([]byte(test.in), &errors)
+			tree := sp.ParseProgram()
 			if len(errors) != 0 && !test.shouldError {
-				t.Errorf("Didn't expect to error, got errors '%v'", errors)
+				t.Errorf("didn't expect to error, but got errors '%v'", errors)
 				return
 			}
 			if len(errors) == 0 && test.shouldError {
-				t.Errorf("Expected error, but parser didn't throw any")
+				t.Errorf("expected error, but parser didn't throw any\nast: %s", ast.Sprint(tree))
 				return
 			}
 
-			tree := sp.ParseProgram()
 			global := interpreter.NewGlobalFrame()
 			frame := interpreter.NewFunctionFrame(global)
 			object := interpreter.Eval(tree, frame)
 
 			if !reflect.DeepEqual(object, test.out) {
-				t.Errorf("expected: %s  got: %s\nast: %s\n", test.out.Inspect(), object.Inspect(), ast.Sprint(tree))
+				t.Errorf("expected: %s  got: %s\nast: %s", test.out.Inspect(), object.Inspect(), ast.Sprint(tree))
 			}
 		})
 	}

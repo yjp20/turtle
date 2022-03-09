@@ -157,7 +157,7 @@ func (l *Lexer) Next() (token.Token, token.Pos, string) {
 		return token.DEFAULT, pos, "_"
 	}
 
-	*l.errors = append(*l.errors, fmt.Errorf("[lexer] Invalid token at pos: %d", int(pos)))
+	l.appendError("Invalid token", pos, pos + 1)
 	return token.ILLEGAL, pos, string(ch)
 }
 
@@ -229,7 +229,7 @@ func (l *Lexer) readStringLiteral() string {
 		}
 	}
 	if !valid {
-		*l.errors = append(*l.errors, fmt.Errorf("[lexer] Expected string to be terminated before EOF"))
+		l.appendError("Expected string to be terminated with a \" before EOF", token.Pos(begin), token.Pos(l.begin))
 	}
 	return string(l.source[begin:l.begin])
 }
@@ -249,9 +249,17 @@ func (l *Lexer) readRuneLiteral() string {
 		}
 	}
 	if !valid {
-		*l.errors = append(*l.errors, fmt.Errorf("[lexer] Expected rune literal to be terminated before EOF"))
+		l.appendError("Expected rune literal to be terminated with a before EOF", token.Pos(begin), token.Pos(l.begin))
 	}
 	return string(l.source[begin:l.begin])
+}
+
+func (l *Lexer) appendError(msg string, pos token.Pos, end token.Pos) {
+	*l.errors = append(*l.errors, StrawError{
+		msg: "[lexer] " + msg,
+		pos: pos,
+		end: end,
+	})
 }
 
 func isDecimal(ch rune) bool {
