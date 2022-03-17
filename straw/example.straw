@@ -4,6 +4,6 @@ fibo: λ (n i64) → {
 		1 ⇒ 1
 		_ ⇒ .fibo { n - 1 } + .fibo { n - 2 }
 	}
-
+}
 
 .fibo 30

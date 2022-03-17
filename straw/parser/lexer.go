@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"unicode"
 	"unicode/utf8"
 
@@ -11,7 +10,7 @@ import (
 const eof = -1
 
 type Lexer struct {
-	source []byte
+	file *File
 
 	// begin and end represents the [begin, end) of the current unicode rune being read
 	begin     int
@@ -21,8 +20,8 @@ type Lexer struct {
 	semicolon bool
 }
 
-func NewLexer(source []byte, errors *[]error) *Lexer {
-	l := &Lexer{source: source, errors: errors}
+func NewLexer(file *File, errors *[]error) *Lexer {
+	l := &Lexer{file: file, errors: errors}
 	l.readRune()
 	return l
 }
@@ -58,7 +57,7 @@ func (l *Lexer) Next() (token.Token, token.Pos, string) {
 	switch ch {
 	case eof:
 		if semicolon {
-			return token.SEMICOLON, pos, "EOF"
+			return token.SEMICOLON, pos, ";"
 		}
 		return token.EOF, pos, "EOF"
 	case '\n':
@@ -155,28 +154,33 @@ func (l *Lexer) Next() (token.Token, token.Pos, string) {
 		return token.ELSE, pos, "~"
 	case '_':
 		return token.DEFAULT, pos, "_"
+	case '■':
+		return token.CONSTRUCT, pos, "■"
 	}
 
-	l.appendError("Invalid token", pos, pos + 1)
+	l.appendError("Invalid token", pos, token.Pos(l.begin))
 	return token.ILLEGAL, pos, string(ch)
 }
 
 func (l *Lexer) readRune() {
 	width := 1
-	if l.end >= len(l.source) {
+	if l.end >= len(l.file.source) {
 		l.ch = eof
 	} else {
-		l.ch, width = utf8.DecodeRune(l.source[l.end:])
+		l.ch, width = utf8.DecodeRune(l.file.source[l.end:])
 	}
 	l.begin = l.end
 	l.end = l.end + width
+	if l.ch == '\n' {
+		l.file.lines = append(l.file.lines, token.Pos(l.begin+1))
+	}
 }
 
 func (l *Lexer) peek() byte {
-	if l.end >= len(l.source) {
+	if l.end >= len(l.file.source) {
 		return 0
 	}
-	return l.source[l.end]
+	return l.file.source[l.end]
 }
 
 func (l *Lexer) skipWhitespace() {
@@ -191,7 +195,7 @@ func (l *Lexer) readComment() string {
 	for l.ch != '\n' && l.ch != eof {
 		l.readRune()
 	}
-	return string(l.source[begin:l.begin])
+	return string(l.file.source[begin:l.begin])
 }
 
 func (l *Lexer) readIdentifier() string {
@@ -199,7 +203,7 @@ func (l *Lexer) readIdentifier() string {
 	for isLetter(l.ch) || isDecimal(l.ch) {
 		l.readRune()
 	}
-	return string(l.source[begin:l.begin])
+	return string(l.file.source[begin:l.begin])
 }
 
 func (l *Lexer) readNumber() (string, bool) {
@@ -211,7 +215,7 @@ func (l *Lexer) readNumber() (string, bool) {
 		}
 		l.readRune()
 	}
-	return string(l.source[begin:l.begin]), hasDecimal
+	return string(l.file.source[begin:l.begin]), hasDecimal
 }
 
 func (l *Lexer) readStringLiteral() string {
@@ -231,7 +235,7 @@ func (l *Lexer) readStringLiteral() string {
 	if !valid {
 		l.appendError("Expected string to be terminated with a \" before EOF", token.Pos(begin), token.Pos(l.begin))
 	}
-	return string(l.source[begin:l.begin])
+	return string(l.file.source[begin:l.begin])
 }
 
 func (l *Lexer) readRuneLiteral() string {
@@ -251,7 +255,7 @@ func (l *Lexer) readRuneLiteral() string {
 	if !valid {
 		l.appendError("Expected rune literal to be terminated with a before EOF", token.Pos(begin), token.Pos(l.begin))
 	}
-	return string(l.source[begin:l.begin])
+	return string(l.file.source[begin:l.begin])
 }
 
 func (l *Lexer) appendError(msg string, pos token.Pos, end token.Pos) {

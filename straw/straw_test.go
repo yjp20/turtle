@@ -199,10 +199,14 @@ func TestStraw(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			errors := []error{}
-			sp := parser.NewParser([]byte(test.in), &errors)
+			file := parser.NewFile([]byte(test.in))
+			sp := parser.NewParser(file, &errors)
 			tree := sp.ParseProgram()
 			if len(errors) != 0 && !test.shouldError {
-				t.Errorf("didn't expect to error, but got errors '%v'", errors)
+				t.Errorf("didn't expect to error")
+				for i:=0; i<len(errors); i++ {
+					t.Errorf(errors[i].(parser.StrawError).Print(file))
+				}
 				return
 			}
 			if len(errors) == 0 && test.shouldError {

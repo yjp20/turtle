@@ -24,9 +24,9 @@ type Parser struct {
 	commentGroup *ast.CommentGroup
 }
 
-func NewParser(source []byte, errors *[]error) *Parser {
+func NewParser(file *File, errors *[]error) *Parser {
 	p := &Parser{
-		lexer:  NewLexer(source, errors),
+		lexer:  NewLexer(file, errors),
 		errors: errors,
 	}
 	p.next()
@@ -38,7 +38,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 		Statements: p.parseStatements(),
 	}
 	if p.tok != token.EOF {
-		p.appendError("Didn't consume all tokens in the lexer", p.pos, p.pos)
+		p.appendError("Didn't consume all tokens in the lexer", p.pos, p.pos+token.Pos(len(p.lit)))
 	}
 	return program
 }
@@ -203,6 +203,8 @@ func (p *Parser) parseAtomicExpression() ast.Expression {
 		expression = p.consumeMatchExpression()
 	case token.PERIOD:
 		expression = p.consumeCallExpression()
+	case token.CONSTRUCT:
+		expression = p.consumeConstructExpression()
 	default:
 		return nil
 	}
@@ -218,11 +220,20 @@ func (p *Parser) parseAtomicExpression() ast.Expression {
 	return expression
 }
 
+func (p *Parser) consumeConstructExpression() ast.Expression {
+	pos := p.consume(token.CONSTRUCT)
+	return &ast.ConstructExpression{
+		Construct: pos,
+		Type:      p.parseAtomicExpression(),
+		Value:     p.consumeTuple(),
+	}
+}
+
 // ---
 // Statements
 
 func (p *Parser) consumeFlexStatement() ast.Statement {
-	left := p.parseExpression(AS)
+	left := p.parseExpression(LOWEST)
 	if left == nil {
 		return &ast.EmptyStatement{}
 	}

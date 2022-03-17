@@ -15,7 +15,8 @@ func main() {
 	filtered := straw.Filter(bytes)
 
 	errors := make([]error, 0)
-	p := parser.NewParser(filtered, &errors)
+	file := parser.NewFile([]byte(filtered))
+	p := parser.NewParser(file, &errors)
 	pg := p.ParseProgram()
 
 	if len(errors) != 0 {

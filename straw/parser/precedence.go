@@ -5,19 +5,17 @@ import "github.com/yjp20/turtle/straw/token"
 type Precedence int
 
 const (
-	AS Precedence = iota * 2
-	LOWEST
+	LOWEST Precedence = iota * 2
 	IF
 	EQUAL
 	COMPARE
 	SUM
 	PRODUCT
+	AS
 )
 
 func GetPrecedence(tok token.Token) (Precedence, Precedence) {
 	switch tok {
-	case token.IDENT:
-		return AS, AS
 	case token.THEN:
 		return IF + 1, IF
 	case token.EQUAL:
@@ -28,6 +26,8 @@ func GetPrecedence(tok token.Token) (Precedence, Precedence) {
 		return SUM, SUM
 	case token.MUL, token.QUO:
 		return PRODUCT, PRODUCT
+	case token.IDENT:
+		return AS, AS
 	}
 	return LOWEST, LOWEST
 }
