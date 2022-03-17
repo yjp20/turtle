@@ -147,6 +147,16 @@ func (cl *CallExpression) expressionNode() {}
 func (cl *CallExpression) Pos() token.Pos  { return cl.Expressions[0].Pos() }
 func (cl *CallExpression) End() token.Pos  { return cl.Expressions[0].End() }
 
+type ConstructExpression struct {
+	Construct token.Pos
+	Type      Expression
+	Value     *Tuple
+}
+
+func (ce *ConstructExpression) expressionNode() {}
+func (ce *ConstructExpression) Pos() token.Pos  { return ce.Construct }
+func (ce *ConstructExpression) End() token.Pos  { return ce.Value.End() }
+
 type Selector struct {
 	Expression Expression
 	Selection  *Identifier
