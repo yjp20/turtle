@@ -79,10 +79,11 @@ func (l *Lexer) Next() (token.Token, token.Pos, string) {
 		return token.SUB, pos, "-"
 	case '*':
 		return token.MUL, pos, "*"
-	case '/':
-		return token.QUO, pos, "/"
 	case '%':
-		return token.MOD, pos, "%"
+		return token.QUO, pos, "%"
+
+	case '/':
+		return token.INDEX, pos, "/"
 
 	case '&':
 		return token.AND, pos, "&"

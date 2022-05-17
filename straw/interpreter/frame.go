@@ -1,5 +1,9 @@
 package interpreter
 
+import (
+	"github.com/yjp20/turtle/straw/kind"
+)
+
 type Frame interface {
 	Get(selector string) Object
 	Set(selector string, value Object)
@@ -7,6 +11,7 @@ type Frame interface {
 
 type FunctionFrame struct {
 	Parent Frame
+	Global *GlobalFrame
 	Values map[string]Object
 	Return Object
 }
@@ -18,6 +23,8 @@ func NewFunctionFrame(parent Frame) *FunctionFrame {
 	}
 }
 
+func (f *FunctionFrame) Kind() kind.Kind { return kind.Frame }
+func (f *FunctionFrame) Inspect() string { return "<frame>" }
 func (f *FunctionFrame) Get(selector string) Object {
 	if _, ok := f.Values[selector]; ok {
 		return f.Values[selector]
@@ -30,46 +37,54 @@ func (f *FunctionFrame) Get(selector string) Object {
 func (f *FunctionFrame) Set(selector string, obj Object) {
 	f.Values[selector] = obj
 }
+func (f *FunctionFrame) GetGlobalFrame() *GlobalFrame {
+	if parent, ok := f.Parent.(*FunctionFrame); ok {
+		return parent.GetGlobalFrame()
+	}
+	return f.Parent.(*GlobalFrame)
+}
 
-func NewGlobalFrame() *GlobalFrame {
-	return &GlobalFrame{}
+func NewGlobalFrame(errors *[]error) *GlobalFrame {
+	return &GlobalFrame{Imports: make([]string, 0), Errors: errors}
 }
 
 type GlobalFrame struct {
-	Modules []string
+	Imports []string
+	Errors  *[]error
 }
 
 func (f *GlobalFrame) Get(selector string) Object {
 	switch selector {
 	case "print":
-		return &BuiltinFunction{Kind: "print"}
+		return &BuiltinFunction{Name: "print"}
 	case "debug":
-		return &BuiltinFunction{Kind: "debug"}
+		return &BuiltinFunction{Name: "debug"}
 	case "make":
-		return &BuiltinFunction{Kind: "make"}
+		return &BuiltinFunction{Name: "make"}
 	case "import":
-		return &BuiltinFunction{Kind: "import"}
+		return &BuiltinFunction{Name: "import"}
 	case "i32":
-		return &Type{Kind: TypeI32}
+		return &Type{ObjectKind: kind.I32}
 	case "i64":
-		return &Type{Kind: TypeI64}
+		return &Type{ObjectKind: kind.I64}
 	case "bool":
-		return &Type{Kind: TypeBool}
+		return &Type{ObjectKind: kind.Bool}
 	case "f64":
-		return &Type{Kind: TypeF64}
+		return &Type{ObjectKind: kind.F64}
 	case "any":
-		return &Type{Kind: TypeAny}
+		return &Type{ObjectKind: kind.Any}
 	case "array":
 		return &Factory{
-			Params: []Field{{Name: "T", Type: &Type{Kind: TypeType}}},
-			Kind:   TypeArray,
+			Params:      []Field{{Name: "T", Type: Type{ObjectKind: kind.Type}}},
+			ProductKind: kind.Array,
 		}
 	case "slice":
 		return &Factory{
-			Params: []Field{{Name: "T", Type: &Type{Kind: TypeType}}},
-			Kind:   TypeSlice,
+			Params:      []Field{{Name: "T", Type: Type{ObjectKind: kind.Type}}},
+			ProductKind: kind.Slice,
 		}
 	}
 	return NULL
 }
 func (f *GlobalFrame) Set(selector string, obj Object) {}
+func (f *GlobalFrame) Import(name string)              {}

@@ -14,8 +14,10 @@ import (
 var PROMPT = ">>> "
 
 func main() {
+	errors := make([]error, 0)
+
 	scanner := bufio.NewScanner(os.Stdin)
-	env := interpreter.NewGlobalFrame()
+	env := interpreter.NewGlobalFrame(&errors)
 	frame := interpreter.NewFunctionFrame(env)
 
 	for {
@@ -24,21 +26,20 @@ func main() {
 		if !scanned {
 			return
 		}
-		errors := make([]error, 0)
 		line := scanner.Bytes()
-		file := parser.NewFile(straw.Filter(line))
-		sp := parser.NewParser(file, &errors)
-		tree := sp.ParseProgram()
+		pf := parser.NewFile(straw.Filter(line))
+		ps := parser.NewParser(pf, &errors)
+		at := ps.ParseProgram()
 
 		if len(errors) != 0 {
 			for _, err := range errors {
 				println(err.Error())
 			}
-			ast.Print(tree)
+			ast.Print(at)
 			continue
 		}
 
-		eval := interpreter.Eval(tree, frame)
+		eval := interpreter.Eval(at, frame)
 		println(eval.Inspect())
 	}
 }

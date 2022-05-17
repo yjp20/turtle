@@ -16,19 +16,19 @@ func main() {
 
 	errors := make([]error, 0)
 	file := parser.NewFile([]byte(filtered))
-	p := parser.NewParser(file, &errors)
-	pg := p.ParseProgram()
+	ps := parser.NewParser(file, &errors)
+	at := ps.ParseProgram()
 
 	if len(errors) != 0 {
 		for _, err := range errors {
 			println(err.Error())
 		}
-		ast.Print(pg)
+		ast.Print(at)
 		return
 	}
 
-	env := interpreter.NewGlobalFrame()
+	env := interpreter.NewGlobalFrame(&errors)
 	frame := interpreter.NewFunctionFrame(env)
-	eval := interpreter.Eval(pg, frame)
+	eval := interpreter.Eval(at, frame)
 	println(eval.Inspect())
 }

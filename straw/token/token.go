@@ -20,8 +20,10 @@ const (
 	ADD // +
 	SUB // -
 	MUL // *
-	QUO // /
-	MOD // %
+	QUO // %
+	MOD // UNDECIDED
+
+	INDEX // UNDECIDED
 
 	AND         // &
 	OR          // |

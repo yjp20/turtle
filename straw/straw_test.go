@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/yjp20/turtle/straw/ast"
+	"github.com/yjp20/turtle/straw/kind"
 	"github.com/yjp20/turtle/straw/interpreter"
 	"github.com/yjp20/turtle/straw/parser"
 )
@@ -94,8 +95,8 @@ var tests = []Test{
 		(y, x)`,
 		&interpreter.Tuple{
 			Fields: []interpreter.Field{
-				{Name: "0", Type: &interpreter.Type{Kind: interpreter.TypeI64}, Value: &interpreter.I64{Value: 6}},
-				{Name: "1", Type: &interpreter.Type{Kind: interpreter.TypeI64}, Value: &interpreter.I64{Value: 10}},
+				{Name: "0", Type: interpreter.Type{ObjectKind: kind.I64}, Value: &interpreter.I64{Value: 6}},
+				{Name: "1", Type: interpreter.Type{ObjectKind: kind.I64}, Value: &interpreter.I64{Value: 10}},
 			},
 		},
 		false,
@@ -149,32 +150,6 @@ var tests = []Test{
 		false,
 	},
 	{
-		"variadic function",
-		`add: λ (‥numbers i64) → {
-			j: 0
-			∀ k ∈ numbers → {
-				j: j + k
-			}
-			j
-		}
-		.add 1 2 3 4`,
-		&interpreter.I64{Value: 10},
-		false,
-	},
-	{
-		"variadic function 0 args",
-		`add: λ (‥numbers i64) → {
-			j: 0
-			∀ k ∈ numbers → {
-				j: j + k
-			}
-			j
-		}
-		.add`,
-		&interpreter.I64{Value: 0},
-		false,
-	},
-	{
 		"default argument functions",
 		`f: λ (n i64: 40) → n
 		.f`,
@@ -187,12 +162,6 @@ var tests = []Test{
 		interpreter.NULL,
 		false,
 	},
-	{
-		"basic parser error",
-		`hello why dude`,
-		interpreter.NULL,
-		true,
-	},
 }
 
 func TestStraw(t *testing.T) {
@@ -200,8 +169,8 @@ func TestStraw(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			errors := []error{}
 			file := parser.NewFile([]byte(test.in))
-			sp := parser.NewParser(file, &errors)
-			tree := sp.ParseProgram()
+			ps := parser.NewParser(file, &errors)
+			as := ps.ParseProgram()
 			if len(errors) != 0 && !test.shouldError {
 				t.Errorf("didn't expect to error")
 				for i:=0; i<len(errors); i++ {
@@ -210,16 +179,16 @@ func TestStraw(t *testing.T) {
 				return
 			}
 			if len(errors) == 0 && test.shouldError {
-				t.Errorf("expected error, but parser didn't throw any\nast: %s", ast.Sprint(tree))
+				t.Errorf("expected error, but parser didn't throw any\nast: %s", ast.Sprint(as))
 				return
 			}
 
-			global := interpreter.NewGlobalFrame()
+			global := interpreter.NewGlobalFrame(&errors)
 			frame := interpreter.NewFunctionFrame(global)
-			object := interpreter.Eval(tree, frame)
+			object := interpreter.Eval(as, frame)
 
 			if !reflect.DeepEqual(object, test.out) {
-				t.Errorf("expected: %s  got: %s\nast: %s", test.out.Inspect(), object.Inspect(), ast.Sprint(tree))
+				t.Errorf("expected: %s  got: %s\nast: %s", test.out.Inspect(), object.Inspect(), ast.Sprint(as))
 			}
 		})
 	}

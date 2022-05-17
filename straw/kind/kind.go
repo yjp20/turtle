@@ -7,7 +7,10 @@ type Kind int8
 const (
 	Unresolved Kind = iota
 	None
+	Null
+	Default
 	Any
+	Frame
 
 	Bool
 

@@ -127,7 +127,7 @@ func (p *Parser) parseExpression(precedence Precedence) ast.Expression {
 				p.consume(token.ELSE)
 				f = p.parseStatement()
 			}
-			left = &ast.If{
+			left = &ast.IfExpression{
 				Conditional: left,
 				True:        t,
 				False:       f,
@@ -209,15 +209,25 @@ func (p *Parser) parseAtomicExpression() ast.Expression {
 		return nil
 	}
 
-	for p.tok == token.LEFT_BRACK {
-		tuple := p.consumeBrackTuple()
-		expression = &ast.Indexor{
-			Expression: expression,
-			Index:      tuple,
+	for {
+		switch p.tok {
+		case token.INDEX:
+			p.consume(token.INDEX)
+			identifier := p.consumeIdentifier()
+			expression = &ast.IndexExpression{
+				Expression: expression,
+				Index:      identifier,
+			}
+		case token.LEFT_BRACK:
+			tuple := p.consumeBrackTuple()
+			expression = &ast.IndexExpression{
+				Expression: expression,
+				Index:      tuple,
+			}
+		default:
+			return expression
 		}
 	}
-
-	return expression
 }
 
 func (p *Parser) consumeConstructExpression() ast.Expression {
@@ -434,28 +444,28 @@ func (p *Parser) consumeFalseLiteral() *ast.FalseLiteral {
 	return &ast.FalseLiteral{False: pos}
 }
 
-func (p *Parser) consumeMatchExpression() *ast.Match {
+func (p *Parser) consumeMatchExpression() *ast.MatchExpression {
 	match := p.consume(token.MATCH)
 	m := p.parseExpression(LOWEST)
 	left := p.consume(token.LEFT_BRACE)
-	c := []ast.Expression{}
-	b := []ast.Statement{}
+	conditionals := []ast.Expression{}
+	bodies := []ast.Statement{}
 	i := 0
 	for p.tok != token.RIGHT_BRACE && p.tok != token.EOF && p.tok != token.SEMICOLON {
-		c = append(c, p.parseExpression(EQUAL))
+		conditionals = append(conditionals, p.parseExpression(EQUAL))
 		p.consume(token.THEN)
-		b = append(b, p.parseStatement())
-		i += 1
+		bodies = append(bodies, p.parseStatement())
 		p.consume(token.SEMICOLON)
+		i += 1
 	}
 	right := p.consume(token.RIGHT_BRACE)
-	return &ast.Match{
+	return &ast.MatchExpression{
 		Match:      match,
 		Left:       left,
 		Right:      right,
 		Item:       m,
-		Conditions: c,
-		Bodies:     b,
+		Conditions: conditionals,
+		Bodies:     bodies,
 	}
 }
 

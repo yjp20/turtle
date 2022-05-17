@@ -41,7 +41,7 @@ func (g *Generator) Generate(n ast.Node) ir.Assignment {
 		g.symbols[li.Name] = a
 	case *ast.ExpressionStatement:
 		a = g.Generate(n.Expression)
-	case *ast.Match:
+	case *ast.MatchExpression:
 		// TODO: FIX
 		ia := g.Generate(n.Item)
 		a = g.counter

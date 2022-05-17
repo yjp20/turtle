@@ -166,14 +166,14 @@ func (s *Selector) expressionNode() {}
 func (s *Selector) Pos() token.Pos  { return s.Expression.Pos() }
 func (s *Selector) End() token.Pos  { return s.Selection.End() }
 
-type Indexor struct {
+type IndexExpression struct {
 	Expression Expression
 	Index      Expression
 }
 
-func (i *Indexor) expressionNode() {}
-func (i *Indexor) Pos() token.Pos  { return i.Expression.Pos() }
-func (i *Indexor) End() token.Pos  { return i.Index.End() }
+func (i *IndexExpression) expressionNode() {}
+func (i *IndexExpression) Pos() token.Pos  { return i.Expression.Pos() }
+func (i *IndexExpression) End() token.Pos  { return i.Index.End() }
 
 type Tuple struct {
 	Left       token.Pos
@@ -195,15 +195,15 @@ func (b *Block) expressionNode() {}
 func (b *Block) Pos() token.Pos  { return b.LeftBrace }
 func (b *Block) End() token.Pos  { return b.RightBrace }
 
-type If struct {
+type IfExpression struct {
 	Conditional Expression
 	True        Statement
 	False       Statement
 }
 
-func (i *If) expressionNode() {}
-func (i *If) Pos() token.Pos  { return i.True.Pos() }
-func (i *If) End() token.Pos  { return i.False.End() }
+func (i *IfExpression) expressionNode() {}
+func (i *IfExpression) Pos() token.Pos  { return i.True.Pos() }
+func (i *IfExpression) End() token.Pos  { return i.False.End() }
 
 type DefaultLiteral struct {
 	DefaultPos token.Pos
@@ -352,7 +352,7 @@ func (a *As) expressionNode() {}
 func (a *As) Pos() token.Pos  { return a.Value.Pos() }
 func (a *As) End() token.Pos  { return a.Type.End() }
 
-type Match struct {
+type MatchExpression struct {
 	Match      token.Pos
 	Left       token.Pos
 	Right      token.Pos
@@ -361,6 +361,6 @@ type Match struct {
 	Bodies     []Statement
 }
 
-func (m *Match) expressionNode() {}
-func (m *Match) Pos() token.Pos  { return m.Left }
-func (m *Match) End() token.Pos  { return m.Right + 1 }
+func (m *MatchExpression) expressionNode() {}
+func (m *MatchExpression) Pos() token.Pos  { return m.Left }
+func (m *MatchExpression) End() token.Pos  { return m.Right + 1 }

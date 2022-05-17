@@ -2,8 +2,14 @@ package interpreter
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/yjp20/turtle/straw/ast"
+	"github.com/yjp20/turtle/straw/kind"
+	"github.com/yjp20/turtle/straw/parser"
 	"github.com/yjp20/turtle/straw/token"
 )
 
@@ -34,17 +40,17 @@ func Eval(node ast.Node, env *FunctionFrame) Object {
 		env.Return = Eval(e.Expression, env)
 	case *ast.CallExpression:
 		return evalCallExpression(e, env)
-	case *ast.If:
+	case *ast.IfExpression:
 		return evalIf(e, env)
 	case *ast.Infix:
 		return evalInfix(e, e.Operator, env)
-	case *ast.DefaultLiteral:
-		return &Default{}
-	case *ast.Match:
+	case *ast.MatchExpression:
 		return evalMatch(e, env)
-	case *ast.Indexor:
+	case *ast.IndexExpression:
 		return evalIndexor(e, env)
 
+	case *ast.DefaultLiteral:
+		return &Default{}
 	case *ast.IntLiteral:
 		return &I64{e.Value}
 	case *ast.StringLiteral:
@@ -108,18 +114,18 @@ func evalFunctionDefinition(fd *ast.FunctionDefinition, env *FunctionFrame) Obje
 	return f
 }
 
-func evalIf(i *ast.If, env *FunctionFrame) Object {
-	c := Eval(i.Conditional, env).(*Bool)
-	if c.Value {
-		return Eval(i.True, env)
+func evalIf(expr *ast.IfExpression, env *FunctionFrame) Object {
+	cond := Eval(expr.Conditional, env).(*Bool)
+	if cond.IsTrue {
+		return Eval(expr.True, env)
 	}
-	if !c.Value && i.False != nil {
-		return Eval(i.False, env)
+	if !cond.IsTrue && expr.False != nil {
+		return Eval(expr.False, env)
 	}
 	return NULL
 }
 
-func evalMatch(m *ast.Match, env *FunctionFrame) Object {
+func evalMatch(m *ast.MatchExpression, env *FunctionFrame) Object {
 	o := Eval(m.Item, env)
 	for i := range m.Conditions {
 		c := Eval(m.Conditions[i], env)
@@ -142,20 +148,10 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 	case *Function:
 		frame := NewFunctionFrame(e.Frame)
 		for i := range e.Args {
-			if e.Args[i].Spread {
-				frame.Set(e.Args[i].Name, &Array{
-					Objects: operands[i:],
-					ItemType: &Type{
-						Kind: TypeArray,
-						Spec: []Field{{Name: "T", Type: e.Args[i].Type}},
-					},
-				})
+			if len(operands) <= i {
+				frame.Set(e.Args[i].Name, e.Args[i].Value)
 			} else {
-				if len(operands) <= i {
-					frame.Set(e.Args[i].Name, e.Args[i].Value)
-				} else {
-					frame.Set(e.Args[i].Name, operands[i])
-				}
+				frame.Set(e.Args[i].Name, operands[i])
 			}
 		}
 		last := Eval(e.Body, frame)
@@ -164,7 +160,27 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 		}
 		return last
 	case *BuiltinFunction:
-		switch e.Kind {
+		switch e.Name {
+		case "import":
+			gf := env.GetGlobalFrame()
+			mf := NewFunctionFrame(gf)
+			dir := operands[0].(*String).Value
+			entries, _ := os.ReadDir(dir)
+			for _, entry := range entries {
+				if !entry.Type().IsRegular() || strings.HasPrefix(entry.Name(), ".st") {
+					continue
+				}
+
+				path := filepath.Join(dir, entry.Name())
+				file, _ := os.Open(path)
+				b, _ := ioutil.ReadAll(file)
+				pf := parser.NewFile(b)
+				ps := parser.NewParser(pf, gf.Errors)
+				at := ps.ParseProgram()
+
+				Eval(at, mf)
+			}
+			return mf
 		case "print":
 			for _, o := range operands {
 				println(o.(*String).Value)
@@ -175,11 +191,11 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 			}
 		case "make":
 			t := operands[0].(*Type)
-			switch t.Kind {
-			case TypeArray:
+			switch t.ObjectKind {
+			case kind.Array:
 				return &Array{
 					Objects:  make([]Object, operands[1].(*I64).Value),
-					ItemType: t.Spec[0].Type,
+					ItemType: &t.Spec[0].Type,
 				}
 			}
 		default:
@@ -193,7 +209,7 @@ func assign(left ast.Node, obj Object, env *FunctionFrame) {
 	switch l := left.(type) {
 	case *ast.Identifier:
 		env.Set(l.Name, obj)
-	case *ast.Indexor:
+	case *ast.IndexExpression:
 		x := Eval(l.Expression, env)
 		t := Eval(l.Index, env).(*Tuple)
 		switch k := x.(type) {
@@ -224,20 +240,22 @@ func evalInfix(i *ast.Infix, operator token.Token, env *FunctionFrame) Object {
 			return &I64{Value: ll.Value + rr.Value}
 		case token.MUL:
 			return &I64{Value: ll.Value * rr.Value}
+		case token.QUO:
+			return &I64{Value: ll.Value / rr.Value}
 		case token.SUB:
 			return &I64{Value: ll.Value - rr.Value}
 		case token.LESS:
-			return &Bool{Value: ll.Value < rr.Value}
+			return &Bool{IsTrue: ll.Value < rr.Value}
 		case token.LESS_EQUAL:
-			return &Bool{Value: ll.Value <= rr.Value}
+			return &Bool{IsTrue: ll.Value <= rr.Value}
 		case token.GREATER:
-			return &Bool{Value: ll.Value > rr.Value}
+			return &Bool{IsTrue: ll.Value > rr.Value}
 		case token.GREATER_EQUAL:
-			return &Bool{Value: ll.Value >= rr.Value}
+			return &Bool{IsTrue: ll.Value >= rr.Value}
 		case token.EQUAL:
-			return &Bool{Value: ll.Value == rr.Value}
+			return &Bool{IsTrue: ll.Value == rr.Value}
 		case token.NOT_EQUAL:
-			return &Bool{Value: ll.Value != rr.Value}
+			return &Bool{IsTrue: ll.Value != rr.Value}
 		default:
 			fmt.Printf("UNHANDLED INFIX OPERATOR: %T\n", operator)
 			return NULL
@@ -250,20 +268,22 @@ func evalInfix(i *ast.Infix, operator token.Token, env *FunctionFrame) Object {
 			return &F64{Value: ll.Value + rr.Value}
 		case token.MUL:
 			return &F64{Value: ll.Value * rr.Value}
+		case token.QUO:
+			return &F64{Value: ll.Value / rr.Value}
 		case token.SUB:
 			return &F64{Value: ll.Value - rr.Value}
 		case token.LESS:
-			return &Bool{Value: ll.Value < rr.Value}
+			return &Bool{IsTrue: ll.Value < rr.Value}
 		case token.LESS_EQUAL:
-			return &Bool{Value: ll.Value <= rr.Value}
+			return &Bool{IsTrue: ll.Value <= rr.Value}
 		case token.GREATER:
-			return &Bool{Value: ll.Value > rr.Value}
+			return &Bool{IsTrue: ll.Value > rr.Value}
 		case token.GREATER_EQUAL:
-			return &Bool{Value: ll.Value >= rr.Value}
+			return &Bool{IsTrue: ll.Value >= rr.Value}
 		case token.EQUAL:
-			return &Bool{Value: ll.Value == rr.Value}
+			return &Bool{IsTrue: ll.Value == rr.Value}
 		case token.NOT_EQUAL:
-			return &Bool{Value: ll.Value != rr.Value}
+			return &Bool{IsTrue: ll.Value != rr.Value}
 		default:
 			fmt.Printf("UNHANDLED INFIX OPERATOR: %T\n", operator)
 			return NULL
@@ -293,7 +313,7 @@ func evalTuple(tuple *ast.Tuple, env *FunctionFrame) []Field {
 			o := Eval(s, env)
 			f[i] = Field{
 				Name:  fmt.Sprintf("%d", i),
-				Type:  &Type{Kind: o.Type()},
+				Type:  Type{ObjectKind: o.Kind()},
 				Value: o,
 			}
 		default:
@@ -334,17 +354,15 @@ func evalSchema(tuple *ast.Tuple, env *FunctionFrame) []Field {
 		switch c := nameExpression.(type) {
 		case *ast.Spread:
 			fields = append(fields, Field{
-				Name:   c.Expression.(*ast.Identifier).Name,
-				Type:   resolvedType,
-				Value:  defaultValue,
-				Spread: true,
+				Name:  c.Expression.(*ast.Identifier).Name,
+				Type:  *resolvedType,
+				Value: defaultValue,
 			})
 		case *ast.Identifier:
 			fields = append(fields, Field{
-				Name:   c.Name,
-				Type:   resolvedType,
-				Value:  defaultValue,
-				Spread: false,
+				Name:  c.Name,
+				Type:  *resolvedType,
+				Value: defaultValue,
 			})
 		default:
 			// TODO: Error
@@ -353,21 +371,24 @@ func evalSchema(tuple *ast.Tuple, env *FunctionFrame) []Field {
 	return fields
 }
 
-func evalIndexor(i *ast.Indexor, env *FunctionFrame) Object {
-	e := Eval(i.Expression, env)
-	t := Eval(i.Index, env).(*Tuple)
+func evalIndexor(i *ast.IndexExpression, env *FunctionFrame) Object {
+	operand := Eval(i.Expression, env)
 
-	switch k := e.(type) {
+	switch operand := operand.(type) {
+	case *FunctionFrame:
+		return operand.Get(i.Index.(*ast.Identifier).Name)
 	case *Array:
-		return k.Objects[t.Fields[0].Value.(*I64).Value]
+		idx := Eval(i.Index, env).(*Tuple)
+		return operand.Objects[idx.Fields[0].Value.(*I64).Value]
 	case *Factory:
-		switch k.Kind {
-		case TypeArray:
-			t := t.Fields[0].Value.(*Type)
+		idx := Eval(i.Index, env).(*Tuple)
+		switch operand.ProductKind {
+		case kind.Array:
+			t := idx.Fields[0].Value.(*Type)
 			return &Type{
-				Name: fmt.Sprintf("array[%s]", t.Name),
-				Kind: TypeArray,
-				Spec: []Field{{Name: "T", Type: &Type{Kind: TypeType}, Value: t}},
+				Name:       fmt.Sprintf("array[%s]", t.Name),
+				ObjectKind: kind.Array,
+				Spec:       []Field{{Name: "T", Type: Type{ObjectKind: kind.Type}, Value: t}},
 			}
 		}
 	}
