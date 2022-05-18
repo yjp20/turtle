@@ -31,17 +31,17 @@ func (d *Default) Inspect() string { return "<default>" }
 type I32 struct{ Value int32 }
 
 func (i *I32) Kind() kind.Kind { return kind.I32 }
-func (i *I32) Inspect() string { return fmt.Sprintf("<int32 %d>", i.Value) }
+func (i *I32) Inspect() string { return fmt.Sprintf("<i32 %d>", i.Value) }
 
 type I64 struct{ Value int64 }
 
 func (i *I64) Kind() kind.Kind { return kind.I64 }
-func (i *I64) Inspect() string { return fmt.Sprintf("<int64 %d>", i.Value) }
+func (i *I64) Inspect() string { return fmt.Sprintf("<i64 %d>", i.Value) }
 
 type F64 struct{ Value float64 }
 
 func (i *F64) Kind() kind.Kind { return kind.F64 }
-func (i *F64) Inspect() string { return fmt.Sprintf("<float64 %f>", i.Value) }
+func (i *F64) Inspect() string { return fmt.Sprintf("<f64 %f>", i.Value) }
 
 type Bool struct{ IsTrue bool }
 
@@ -76,9 +76,12 @@ type Tuple struct {
 
 func (t *Tuple) Kind() kind.Kind { return kind.Tuple }
 func (t *Tuple) Inspect() string {
-	s := "<tuple ( "
-	for _, f := range t.Fields {
-		s = s + fmt.Sprintf("%s:%s ", f.Name, f.Type)
+	s := "<tuple ("
+	for i, f := range t.Fields {
+		s = s + fmt.Sprintf("%s:%v", f.Name, f.Value.Inspect())
+		if i != len(t.Fields) - 1{
+			s = s + ", "
+		}
 	}
 	return s + ")>"
 }

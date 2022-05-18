@@ -6,5 +6,5 @@ fibo: λ (n i64) → {
 	}
 	return b
 }
-
-.fibo 40
+.fibo 20
+# <i64 6765>

@@ -20,11 +20,11 @@ type Parser struct {
 	pos token.Pos
 	lit string
 
-	errors       *[]error
+	errors       *token.ErrorList
 	commentGroup *ast.CommentGroup
 }
 
-func NewParser(file *File, errors *[]error) *Parser {
+func NewParser(file *File, errors *token.ErrorList) *Parser {
 	p := &Parser{
 		lexer:  NewLexer(file, errors),
 		errors: errors,

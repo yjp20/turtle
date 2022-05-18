@@ -9,12 +9,13 @@ import (
 	"github.com/yjp20/turtle/straw/ast"
 	"github.com/yjp20/turtle/straw/interpreter"
 	"github.com/yjp20/turtle/straw/parser"
+	"github.com/yjp20/turtle/straw/token"
 )
 
 var PROMPT = ">>> "
 
 func main() {
-	errors := make([]error, 0)
+	errors := token.NewErrorList()
 
 	scanner := bufio.NewScanner(os.Stdin)
 	env := interpreter.NewGlobalFrame(&errors)
@@ -32,9 +33,7 @@ func main() {
 		at := ps.ParseProgram()
 
 		if len(errors) != 0 {
-			for _, err := range errors {
-				println(err.Error())
-			}
+			errors.Print()
 			ast.Print(at)
 			continue
 		}

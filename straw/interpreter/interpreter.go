@@ -63,6 +63,8 @@ func Eval(node ast.Node, env *FunctionFrame) Object {
 		return env.Get(e.Name)
 	case *ast.FunctionDefinition:
 		return evalFunctionDefinition(e, env)
+	case *ast.ConstructExpression:
+		return evalConstructExpression(e, env)
 	case *ast.TypeSpec:
 		// TODO
 	default:
@@ -201,6 +203,16 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 		default:
 			return NULL
 		}
+	}
+	return NULL
+}
+
+func evalConstructExpression(c *ast.ConstructExpression, env *FunctionFrame) Object {
+	t := Eval(c.Type, env).(*Type)
+	switch t.Kind() {
+	case kind.Array:
+
+
 	}
 	return NULL
 }

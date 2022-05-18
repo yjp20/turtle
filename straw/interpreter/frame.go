@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"github.com/yjp20/turtle/straw/kind"
+	"github.com/yjp20/turtle/straw/token"
 )
 
 type Frame interface {
@@ -44,13 +45,13 @@ func (f *FunctionFrame) GetGlobalFrame() *GlobalFrame {
 	return f.Parent.(*GlobalFrame)
 }
 
-func NewGlobalFrame(errors *[]error) *GlobalFrame {
+func NewGlobalFrame(errors *token.ErrorList) *GlobalFrame {
 	return &GlobalFrame{Imports: make([]string, 0), Errors: errors}
 }
 
 type GlobalFrame struct {
 	Imports []string
-	Errors  *[]error
+	Errors  *token.ErrorList
 }
 
 func (f *GlobalFrame) Get(selector string) Object {

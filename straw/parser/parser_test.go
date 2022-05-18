@@ -3,10 +3,12 @@ package parser
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/yjp20/turtle/straw/token"
 )
 
 func TestParser(t *testing.T) {
-	errors := make([]error, 0)
+	errors := token.NewErrorList()
 	p := NewParser(source, &errors)
 	prog := p.ParseProgram()
 

@@ -8,21 +8,19 @@ import (
 	"github.com/yjp20/turtle/straw/ast"
 	"github.com/yjp20/turtle/straw/interpreter"
 	"github.com/yjp20/turtle/straw/parser"
+	"github.com/yjp20/turtle/straw/token"
 )
 
 func main() {
 	bytes, _ := ioutil.ReadAll(os.Stdin)
-	filtered := straw.Filter(bytes)
 
-	errors := make([]error, 0)
-	file := parser.NewFile([]byte(filtered))
+	errors := token.NewErrorList()
+	file := parser.NewFile(bytes)
 	ps := parser.NewParser(file, &errors)
 	at := ps.ParseProgram()
 
 	if len(errors) != 0 {
-		for _, err := range errors {
-			println(err.Error())
-		}
+		errors.Print()
 		ast.Print(at)
 		return
 	}

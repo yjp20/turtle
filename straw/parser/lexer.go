@@ -16,11 +16,11 @@ type Lexer struct {
 	begin     int
 	end       int
 	ch        rune
-	errors    *[]error
+	errors    *token.ErrorList
 	semicolon bool
 }
 
-func NewLexer(file *File, errors *[]error) *Lexer {
+func NewLexer(file *File, errors *token.ErrorList) *Lexer {
 	l := &Lexer{file: file, errors: errors}
 	l.readRune()
 	return l
