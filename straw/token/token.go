@@ -21,9 +21,9 @@ const (
 	SUB // -
 	MUL // *
 	QUO // %
-	MOD // UNDECIDED
+	MOD // $
 
-	INDEX // UNDECIDED
+	INDEX // /
 
 	AND         // &
 	OR          // |
@@ -33,13 +33,13 @@ const (
 	SHIFT_RIGHT // »
 
 	ASSIGN        // :
+	NOT           // !
 	LOGICAL_AND   // and
 	LOGICAL_OR    // or
 	LOGICAL_XOR   // xor
 	EQUAL         // =
 	LESS          // <
 	GREATER       // >
-	NOT           // !
 	NOT_EQUAL     // ≠
 	LESS_EQUAL    // ≤
 	GREATER_EQUAL // ≥
@@ -99,6 +99,10 @@ func Lookup(lit string) Token {
 
 	case "or":
 		return OR
+	case "xor":
+		return XOR
+	case "and":
+		return AND
 	case "break":
 		return BREAK
 	case "continue":

@@ -24,7 +24,7 @@ type Parser struct {
 	commentGroup *ast.CommentGroup
 }
 
-func NewParser(file *File, errors *token.ErrorList) *Parser {
+func NewParser(file *token.File, errors *token.ErrorList) *Parser {
 	p := &Parser{
 		lexer:  NewLexer(file, errors),
 		errors: errors,
@@ -109,7 +109,7 @@ func (p *Parser) parseExpression(precedence Precedence) ast.Expression {
 	for {
 		switch p.tok {
 		case token.ADD, token.SUB, token.MUL, token.QUO, token.EQUAL, token.LESS_EQUAL,
-			token.LESS, token.GREATER_EQUAL, token.GREATER, token.NOT_EQUAL:
+			token.LESS, token.GREATER_EQUAL, token.GREATER, token.NOT_EQUAL, token.AND, token.OR, token.XOR:
 			tok := p.tok
 			pos := p.consume(p.tok)
 			expr := p.parseExpression(rp)
@@ -552,9 +552,5 @@ func (p *Parser) consumeSemi() {
 }
 
 func (p *Parser) appendError(msg string, pos token.Pos, end token.Pos) {
-	*p.errors = append(*p.errors, StrawError{
-		msg: "[parser] " + msg,
-		pos: pos,
-		end: end,
-	})
+	*p.errors = append(*p.errors, token.NewError("[parser] "+msg, pos, end))
 }

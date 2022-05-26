@@ -12,7 +12,6 @@ type Frame interface {
 
 type FunctionFrame struct {
 	Parent Frame
-	Global *GlobalFrame
 	Values map[string]Object
 	Return Object
 }
@@ -37,12 +36,6 @@ func (f *FunctionFrame) Get(selector string) Object {
 }
 func (f *FunctionFrame) Set(selector string, obj Object) {
 	f.Values[selector] = obj
-}
-func (f *FunctionFrame) GetGlobalFrame() *GlobalFrame {
-	if parent, ok := f.Parent.(*FunctionFrame); ok {
-		return parent.GetGlobalFrame()
-	}
-	return f.Parent.(*GlobalFrame)
 }
 
 func NewGlobalFrame(errors *token.ErrorList) *GlobalFrame {

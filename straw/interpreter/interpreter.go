@@ -15,56 +15,66 @@ import (
 
 // Basic tree walk interpreter implementation
 
-func Eval(node ast.Node, env *FunctionFrame) Object {
+func (gf *GlobalFrame) Eval(node ast.Node, env *FunctionFrame) Object {
 	if env.Return != nil {
 		return NULL
 	}
 	// fmt.Printf("EVAL: %T\n", node)
 	switch e := node.(type) {
 	case *ast.Program:
-		return evalStatements(e.Statements, env)
+		return gf.evalStatements(e.Statements, env)
 	case *ast.Block:
-		return evalStatements(e.Statements, env)
+		return gf.evalStatements(e.Statements, env)
 	case *ast.Tuple:
-		return &Tuple{Fields: evalTuple(e, env)}
+		return &Tuple{Fields: gf.evalTuple(e, env)}
 
 	case *ast.AssignStatement:
-		assign(e.Left, Eval(e.Right, env), env)
+		gf.assign(e.Left, gf.Eval(e.Right, env), env)
 	case *ast.ExpressionStatement:
-		return Eval(e.Expression, env)
+		return gf.Eval(e.Expression, env)
 	case *ast.EmptyStatement:
 		return NULL
 	case *ast.ForStatement:
-		return evalForStatement(e, env)
+		return gf.evalForStatement(e, env)
 	case *ast.ReturnStatement:
-		env.Return = Eval(e.Expression, env)
+		env.Return = gf.Eval(e.Expression, env)
 	case *ast.CallExpression:
-		return evalCallExpression(e, env)
+		return gf.evalCallExpression(e, env)
 	case *ast.IfExpression:
-		return evalIf(e, env)
+		return gf.evalIf(e, env)
+	case *ast.Prefix:
+		return gf.evalPrefix(e, e.Operator, env)
 	case *ast.Infix:
-		return evalInfix(e, e.Operator, env)
+		return gf.evalInfix(e, e.Operator, env)
 	case *ast.MatchExpression:
-		return evalMatch(e, env)
+		return gf.evalMatch(e, env)
 	case *ast.IndexExpression:
-		return evalIndexor(e, env)
+		return gf.evalIndexor(e, env)
 
 	case *ast.DefaultLiteral:
 		return &Default{}
 	case *ast.IntLiteral:
 		return &I64{e.Value}
+	case *ast.TrueLiteral:
+		return &Bool{true}
+	case *ast.FalseLiteral:
+		return &Bool{false}
 	case *ast.StringLiteral:
 		return &String{e.Value}
 	case *ast.FloatLiteral:
 		return &F64{e.Value}
 	case *ast.RangeLiteral:
-		return evalRangeLiteral(e, env)
+		return gf.evalRangeLiteral(e, env)
 	case *ast.Identifier:
-		return env.Get(e.Name)
+		obj := env.Get(e.Name)
+		if obj == NULL {
+			gf.appendError("Couldn't find identifier", node.Pos(), node.End())
+		}
+		return obj
 	case *ast.FunctionDefinition:
-		return evalFunctionDefinition(e, env)
+		return gf.evalFunctionDefinition(e, env)
 	case *ast.ConstructExpression:
-		return evalConstructExpression(e, env)
+		return gf.evalConstructExpression(e, env)
 	case *ast.TypeSpec:
 		// TODO
 	default:
@@ -73,32 +83,32 @@ func Eval(node ast.Node, env *FunctionFrame) Object {
 	return NULL
 }
 
-func evalStatements(stmts []ast.Statement, env *FunctionFrame) Object {
+func (gf *GlobalFrame) evalStatements(stmts []ast.Statement, env *FunctionFrame) Object {
 	var last Object = NULL
 	for _, stmt := range stmts {
 		switch stmt.(type) {
 		case *ast.EmptyStatement:
 		default:
-			last = Eval(stmt, env)
+			last = gf.Eval(stmt, env)
 		}
 	}
 	return last
 }
 
-func evalForStatement(fs *ast.ForStatement, env *FunctionFrame) Object {
+func (gf *GlobalFrame) evalForStatement(fs *ast.ForStatement, env *FunctionFrame) Object {
 	if len(fs.Clauses) == 1 {
 		if s, ok := fs.Clauses[0].(*ast.EachStatement); ok {
-			r := Eval(s.Right, env)
+			r := gf.Eval(s.Right, env)
 			switch rr := r.(type) {
 			case *Range:
 				for i := rr.Start; i < rr.End; i++ {
-					assign(s.Left, &I64{Value: i}, env)
-					Eval(fs.Expression, env)
+					gf.assign(s.Left, &I64{Value: i}, env)
+					gf.Eval(fs.Expression, env)
 				}
 			case *Array:
 				for _, item := range rr.Objects {
-					assign(s.Left, item, env)
-					Eval(fs.Expression, env)
+					gf.assign(s.Left, item, env)
+					gf.Eval(fs.Expression, env)
 				}
 			}
 		}
@@ -106,42 +116,42 @@ func evalForStatement(fs *ast.ForStatement, env *FunctionFrame) Object {
 	return NULL
 }
 
-func evalFunctionDefinition(fd *ast.FunctionDefinition, env *FunctionFrame) Object {
+func (gf *GlobalFrame) evalFunctionDefinition(fd *ast.FunctionDefinition, env *FunctionFrame) Object {
 	f := &Function{Body: fd.Body, Frame: env}
 	if fd.Identifier != nil {
 		f.Name = fd.Identifier.Name
 		env.Set(f.Name, f)
 	}
-	f.Args = evalSchema(fd.Args, env)
+	f.Args = gf.evalSchema(fd.Args, env)
 	return f
 }
 
-func evalIf(expr *ast.IfExpression, env *FunctionFrame) Object {
-	cond := Eval(expr.Conditional, env).(*Bool)
+func (gf *GlobalFrame) evalIf(expr *ast.IfExpression, env *FunctionFrame) Object {
+	cond := gf.Eval(expr.Conditional, env).(*Bool)
 	if cond.IsTrue {
-		return Eval(expr.True, env)
+		return gf.Eval(expr.True, env)
 	}
 	if !cond.IsTrue && expr.False != nil {
-		return Eval(expr.False, env)
+		return gf.Eval(expr.False, env)
 	}
 	return NULL
 }
 
-func evalMatch(m *ast.MatchExpression, env *FunctionFrame) Object {
-	o := Eval(m.Item, env)
+func (gf *GlobalFrame) evalMatch(m *ast.MatchExpression, env *FunctionFrame) Object {
+	o := gf.Eval(m.Item, env)
 	for i := range m.Conditions {
-		c := Eval(m.Conditions[i], env)
+		c := gf.Eval(m.Conditions[i], env)
 		if _, ok := c.(*Default); ok || c.Inspect() == o.Inspect() {
-			return Eval(m.Bodies[i], env)
+			return gf.Eval(m.Bodies[i], env)
 		}
 	}
 	return NULL
 }
 
-func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
+func (gf *GlobalFrame) evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 	objs := make([]Object, len(c.Expressions))
 	for i, expr := range c.Expressions {
-		objs[i] = Eval(expr, env)
+		objs[i] = gf.Eval(expr, env)
 	}
 
 	operator := objs[0]
@@ -156,7 +166,7 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 				frame.Set(e.Args[i].Name, operands[i])
 			}
 		}
-		last := Eval(e.Body, frame)
+		last := gf.Eval(e.Body, frame)
 		if frame.Return != nil {
 			return frame.Return
 		}
@@ -164,7 +174,6 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 	case *BuiltinFunction:
 		switch e.Name {
 		case "import":
-			gf := env.GetGlobalFrame()
 			mf := NewFunctionFrame(gf)
 			dir := operands[0].(*String).Value
 			entries, _ := os.ReadDir(dir)
@@ -176,11 +185,11 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 				path := filepath.Join(dir, entry.Name())
 				file, _ := os.Open(path)
 				b, _ := ioutil.ReadAll(file)
-				pf := parser.NewFile(b)
+				pf := token.NewFile(b)
 				ps := parser.NewParser(pf, gf.Errors)
 				at := ps.ParseProgram()
 
-				Eval(at, mf)
+				gf.Eval(at, mf)
 			}
 			return mf
 		case "print":
@@ -195,8 +204,9 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 			t := operands[0].(*Type)
 			switch t.ObjectKind {
 			case kind.Array:
+				length := operands[1].(*I64).Value
 				return &Array{
-					Objects:  make([]Object, operands[1].(*I64).Value),
+					Objects:  make([]Object, length),
 					ItemType: &t.Spec[0].Type,
 				}
 			}
@@ -207,23 +217,30 @@ func evalCallExpression(c *ast.CallExpression, env *FunctionFrame) Object {
 	return NULL
 }
 
-func evalConstructExpression(c *ast.ConstructExpression, env *FunctionFrame) Object {
-	t := Eval(c.Type, env).(*Type)
-	switch t.Kind() {
+func (gf *GlobalFrame) evalConstructExpression(c *ast.ConstructExpression, env *FunctionFrame) Object {
+	t := gf.Eval(c.Type, env).(*Type)
+	switch t.ObjectKind {
 	case kind.Array:
-
+		objs := make([]Object, len(c.Value.Statements))
+		for i, stmt := range c.Value.Statements {
+			objs[i] = gf.Eval(stmt.(*ast.ExpressionStatement).Expression, env)
+		}
+		return &Array{
+			Objects:  objs,
+			ItemType: &t.Spec[0].Type,
+		}
 
 	}
 	return NULL
 }
 
-func assign(left ast.Node, obj Object, env *FunctionFrame) {
+func (gf *GlobalFrame) assign(left ast.Node, obj Object, env *FunctionFrame) {
 	switch l := left.(type) {
 	case *ast.Identifier:
 		env.Set(l.Name, obj)
 	case *ast.IndexExpression:
-		x := Eval(l.Expression, env)
-		t := Eval(l.Index, env).(*Tuple)
+		x := gf.Eval(l.Expression, env)
+		t := gf.Eval(l.Index, env).(*Tuple)
 		switch k := x.(type) {
 		case *Array:
 			k.Objects[t.Fields[0].Value.(*I64).Value] = obj
@@ -232,7 +249,7 @@ func assign(left ast.Node, obj Object, env *FunctionFrame) {
 		for i, s := range l.Statements {
 			switch st := s.(type) {
 			case *ast.ExpressionStatement:
-				assign(st.Expression.(*ast.Identifier), obj.(*Tuple).Fields[i].Value, env)
+				gf.assign(st.Expression.(*ast.Identifier), obj.(*Tuple).Fields[i].Value, env)
 			default:
 				// TODO: ERORR?
 			}
@@ -240,10 +257,39 @@ func assign(left ast.Node, obj Object, env *FunctionFrame) {
 	}
 }
 
-func evalInfix(i *ast.Infix, operator token.Token, env *FunctionFrame) Object {
-	l := Eval(i.Left, env)
-	r := Eval(i.Right, env)
+func (gf *GlobalFrame) evalPrefix(i *ast.Prefix, operator token.Token, env *FunctionFrame) Object {
+	e := gf.Eval(i.Expression, env)
+	switch e := e.(type) {
+	case *Bool:
+		if operator == token.NOT {
+			return &Bool{!e.IsTrue}
+		}
+	}
+	return NULL
+}
+
+func (gf *GlobalFrame) evalInfix(i *ast.Infix, operator token.Token, env *FunctionFrame) Object {
+	l := gf.Eval(i.Left, env)
+	r := gf.Eval(i.Right, env)
 	switch l.(type) {
+	case *Bool:
+		ll := l.(*Bool)
+		rr := r.(*Bool)
+		switch operator {
+		case token.AND:
+			return &Bool{IsTrue: ll.IsTrue && rr.IsTrue}
+		case token.OR:
+			return &Bool{IsTrue: ll.IsTrue || rr.IsTrue}
+		case token.XOR:
+			return &Bool{IsTrue: (ll.IsTrue || rr.IsTrue) && !(ll.IsTrue && rr.IsTrue)}
+		case token.EQUAL:
+			return &Bool{IsTrue: ll.IsTrue == rr.IsTrue}
+		case token.NOT_EQUAL:
+			return &Bool{IsTrue: ll.IsTrue != rr.IsTrue}
+		default:
+			fmt.Printf("UNHANDLED INFIX OPERATOR: %T\n", operator)
+			return NULL
+		}
 	case *I64:
 		ll := l.(*I64)
 		rr := r.(*I64)
@@ -304,9 +350,9 @@ func evalInfix(i *ast.Infix, operator token.Token, env *FunctionFrame) Object {
 	return NULL
 }
 
-func evalRangeLiteral(rl *ast.RangeLiteral, env *FunctionFrame) *Range {
-	l := Eval(rl.Left, env).(*I64).Value
-	r := Eval(rl.Right, env).(*I64).Value
+func (gf *GlobalFrame) evalRangeLiteral(rl *ast.RangeLiteral, env *FunctionFrame) *Range {
+	l := gf.Eval(rl.Left, env).(*I64).Value
+	r := gf.Eval(rl.Right, env).(*I64).Value
 	if !rl.LeftInclusive {
 		l += 1
 	}
@@ -316,13 +362,13 @@ func evalRangeLiteral(rl *ast.RangeLiteral, env *FunctionFrame) *Range {
 	return &Range{Start: l, End: r}
 }
 
-func evalTuple(tuple *ast.Tuple, env *FunctionFrame) []Field {
+func (gf *GlobalFrame) evalTuple(tuple *ast.Tuple, env *FunctionFrame) []Field {
 	f := make([]Field, len(tuple.Statements))
 	for i, stmt := range tuple.Statements {
 		switch s := stmt.(type) {
 		case *ast.AssignStatement:
 		case *ast.ExpressionStatement:
-			o := Eval(s, env)
+			o := gf.Eval(s, env)
 			f[i] = Field{
 				Name:  fmt.Sprintf("%d", i),
 				Type:  Type{ObjectKind: o.Kind()},
@@ -335,7 +381,7 @@ func evalTuple(tuple *ast.Tuple, env *FunctionFrame) []Field {
 	return f
 }
 
-func evalSchema(tuple *ast.Tuple, env *FunctionFrame) []Field {
+func (gf *GlobalFrame) evalSchema(tuple *ast.Tuple, env *FunctionFrame) []Field {
 	fields := make([]Field, 0)
 	for _, stmt := range tuple.Statements {
 		var (
@@ -348,7 +394,7 @@ func evalSchema(tuple *ast.Tuple, env *FunctionFrame) []Field {
 		case *ast.AssignStatement:
 			nameExpression = s.Left.(*ast.As).Value
 			typeExpression = s.Left.(*ast.As).Type
-			defaultValue = Eval(s.Right, env)
+			defaultValue = gf.Eval(s.Right, env)
 		case *ast.ExpressionStatement:
 			nameExpression = s.Expression.(*ast.As).Value
 			typeExpression = s.Expression.(*ast.As).Type
@@ -357,7 +403,7 @@ func evalSchema(tuple *ast.Tuple, env *FunctionFrame) []Field {
 		}
 
 		var resolvedType *Type
-		if ot, ok := Eval(typeExpression, env).(*Type); ok {
+		if ot, ok := gf.Eval(typeExpression, env).(*Type); ok {
 			resolvedType = ot
 		} else {
 			// TODO Error
@@ -383,17 +429,17 @@ func evalSchema(tuple *ast.Tuple, env *FunctionFrame) []Field {
 	return fields
 }
 
-func evalIndexor(i *ast.IndexExpression, env *FunctionFrame) Object {
-	operand := Eval(i.Expression, env)
+func (gf *GlobalFrame) evalIndexor(i *ast.IndexExpression, env *FunctionFrame) Object {
+	operand := gf.Eval(i.Expression, env)
 
 	switch operand := operand.(type) {
 	case *FunctionFrame:
 		return operand.Get(i.Index.(*ast.Identifier).Name)
 	case *Array:
-		idx := Eval(i.Index, env).(*Tuple)
+		idx := gf.Eval(i.Index, env).(*Tuple)
 		return operand.Objects[idx.Fields[0].Value.(*I64).Value]
 	case *Factory:
-		idx := Eval(i.Index, env).(*Tuple)
+		idx := gf.Eval(i.Index, env).(*Tuple)
 		switch operand.ProductKind {
 		case kind.Array:
 			t := idx.Fields[0].Value.(*Type)
@@ -406,4 +452,8 @@ func evalIndexor(i *ast.IndexExpression, env *FunctionFrame) Object {
 	}
 
 	return NULL
+}
+
+func (gf *GlobalFrame) appendError(msg string, pos token.Pos, end token.Pos) {
+	*gf.Errors = append(*gf.Errors, token.NewError("[interpreter] "+msg, pos, end))
 }

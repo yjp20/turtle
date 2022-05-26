@@ -1,16 +1,14 @@
-package parser
+package token
 
 import (
-	"strings"
 	"fmt"
-
-	"github.com/yjp20/turtle/straw/token"
+	"strings"
 )
 
-type StrawError struct {
+type Error struct {
 	msg string
-	pos token.Pos
-	end token.Pos
+	pos Pos
+	end Pos
 }
 
 var (
@@ -18,20 +16,24 @@ var (
 	red   = "\033[31;1;4m"
 )
 
-func (se StrawError) Error() string {
+func NewError(msg string, pos Pos, end Pos) Error {
+	return Error{msg, pos, end}
+}
+
+func (se Error) Error() string {
 	return se.msg
 }
 
-func (se StrawError) Print(file *File) string {
+func (se Error) Print(file *File) string {
 	sb := strings.Builder{}
 	sb.WriteString(se.Error() + "\n")
 	sl := file.StartOfLine(file.SearchLine(se.pos))
 	el := file.StartOfLine(file.SearchLine(se.end) + 1)
-	sb.Write(file.source[sl:se.pos])
+	sb.Write(file.Source[sl:se.pos])
 	sb.WriteString(red)
-	sb.Write(file.source[se.pos:se.end])
+	sb.Write(file.Source[se.pos:se.end])
 	sb.WriteString(reset)
-	sb.Write(file.source[se.end:el])
+	sb.Write(file.Source[se.end:el])
 	sb.WriteString(fmt.Sprintf("%d:%d:%d:%d\n", sl, se.pos, se.end, el))
 	return sb.String()
 }

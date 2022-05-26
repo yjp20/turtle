@@ -50,13 +50,13 @@ func TestStraw(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			errors := token.NewErrorList()
-			file := parser.NewFile([]byte(test.in))
+			file := token.NewFile([]byte(test.in))
 			ps := parser.NewParser(file, &errors)
 			as := ps.ParseProgram()
 			if len(errors) != 0 && !test.shouldError {
 				t.Errorf("didn't expect to error")
 				for i := 0; i < len(errors); i++ {
-					t.Errorf(errors[i].(parser.StrawError).Print(file))
+					t.Errorf(errors[i].(token.Error).Print(file))
 				}
 				return
 			}
@@ -67,7 +67,7 @@ func TestStraw(t *testing.T) {
 
 			global := interpreter.NewGlobalFrame(&errors)
 			frame := interpreter.NewFunctionFrame(global)
-			object := interpreter.Eval(as, frame)
+			object := global.Eval(as, frame)
 
 			if test.out != object.Inspect() {
 				t.Errorf("expected: %s  got: %s\nast: %s", test.out, object.Inspect(), ast.Sprint(as))
