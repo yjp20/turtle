@@ -1,10 +1,10 @@
-package compiler
+package rv64
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/yjp20/turtle/straw/ir"
+	"github.com/yjp20/turtle/straw/pkg/ir"
 )
 
 type AddressMap struct {
@@ -111,11 +111,23 @@ func (am *AddressMap) spill() {
 
 }
 
-func Compile(insts []ir.Instruction) string {
-	return CompileBlock(insts)
+func Compile(program ir.Program) string {
+	sb := strings.Builder{}
+	for _, procedure := range program.Funcs {
+		sb.WriteString(compileProcedure(procedure))
+	}
+	return sb.String()
 }
 
-func CompileBlock(block []ir.Instruction) string {
+func compileProcedure(procedure ir.Procedure) string {
+	sb := strings.Builder{}
+	for _, block := range procedure.Blocks {
+		sb.WriteString(compileBlock(block.Instructions))
+	}
+	return sb.String()
+}
+
+func compileBlock(block []ir.Instruction) string {
 	sb := strings.Builder{}
 	am := AddressMap{addresses: make([]AddressDescriptor, len(block))}
 	for i := 0; i < len(block); i++ {
@@ -127,7 +139,7 @@ func CompileBlock(block []ir.Instruction) string {
 		switch inst.Kind {
 		case ir.Function:
 			fmt.Fprintf(&sb, "%s:\n", inst.Literal.(string))
-		case ir.Arg:
+		case ir.Pop:
 			am.addresses[inst.Index].MemoryAddress = 4 + StackAddress(inst.Literal.(int))
 		case ir.Add:
 			dest, r1, r2 := am.GetReg(&sb, inst)
