@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/yjp20/turtle/straw"
-	"github.com/yjp20/turtle/straw/ast"
-	"github.com/yjp20/turtle/straw/interpreter"
-	"github.com/yjp20/turtle/straw/parser"
-	"github.com/yjp20/turtle/straw/token"
+	"github.com/yjp20/turtle/straw/pkg/ast"
+	"github.com/yjp20/turtle/straw/pkg/generator"
+	"github.com/yjp20/turtle/straw/pkg/parser"
+	"github.com/yjp20/turtle/straw/pkg/token"
+	"github.com/yjp20/turtle/straw/pkg/vm"
 )
 
 var PROMPT = ">>> "
@@ -17,28 +17,33 @@ var PROMPT = ">>> "
 func main() {
 	errors := token.NewErrorList()
 
-	scanner := bufio.NewScanner(os.Stdin)
-	env := interpreter.NewGlobalFrame(&errors)
-	frame := interpreter.NewFunctionFrame(env)
+	scn := bufio.NewScanner(os.Stdin)
+	env := vm.NewVM(&errors)
+	frame := vm.NewFunctionFrame(nil)
 
 	for {
 		fmt.Fprintf(os.Stdout, PROMPT)
-		scanned := scanner.Scan()
+		scanned := scn.Scan()
 		if !scanned {
 			return
 		}
-		line := scanner.Bytes()
-		pf := parser.NewFile(straw.Filter(line))
-		ps := parser.NewParser(pf, &errors)
-		at := ps.ParseProgram()
+
+		line := scn.Bytes()
+		file := token.NewFile(line)
+		lex := parser.NewLexer(file, &errors)
+		par := parser.NewParser(lex, &errors)
+		gen := generator.NewGenerator(&errors)
+
+		node := par.ParseProgram()
+		code := gen.Generate(node)
 
 		if len(errors) != 0 {
 			errors.Print()
-			ast.Print(at)
+			ast.Print(node)
 			continue
 		}
 
-		eval := interpreter.Eval(at, frame)
-		println(eval.Inspect())
+		res := env.Eval(code, frame)
+		println(res.Inspect())
 	}
 }

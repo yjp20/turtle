@@ -31,3 +31,11 @@ func (f *File) StartOfLine(line int) Pos {
 	}
 	return f.Lines[line]
 }
+
+type Pos int
+
+type Position struct {
+	Filename string
+	Line     int
+	Column   int
+}

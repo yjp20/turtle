@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/yjp20/turtle/straw/token"
+import "github.com/yjp20/turtle/straw/pkg/token"
 
 type Precedence int
 

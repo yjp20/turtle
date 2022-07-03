@@ -7,12 +7,6 @@ import (
 	"github.com/yjp20/turtle/straw/ir"
 )
 
-type RegisterAddress int
-
-func (ra RegisterAddress) String() string { return fmt.Sprintf("x%d", ra) }
-
-type StackAddress int
-
 type AddressMap struct {
 	addresses  []AddressDescriptor
 	registers  [32]RegisterDescriptor
@@ -30,6 +24,12 @@ type RegisterDescriptor struct {
 	Used       bool
 	Assignment ir.Assignment
 }
+
+type RegisterAddress int
+
+func (ra RegisterAddress) String() string { return fmt.Sprintf("x%d", ra) }
+
+type StackAddress int
 
 func (am *AddressMap) GetReg(sb *strings.Builder, inst ir.Instruction) (dest RegisterAddress, r1 RegisterAddress, r2 RegisterAddress) {
 	for i := RegisterAddress(5); i < 32; i++ {
@@ -131,13 +131,13 @@ func CompileBlock(block []ir.Instruction) string {
 			am.addresses[inst.Index].MemoryAddress = 4 + StackAddress(inst.Literal.(int))
 		case ir.Add:
 			dest, r1, r2 := am.GetReg(&sb, inst)
-			fmt.Fprintf(&sb, "  add %s %s %s\n", dest, r1, r2)
+			fmt.Fprintf(&sb, "  add %s, %s, %s\n", dest, r1, r2)
 		case ir.Mul:
 			dest, r1, r2 := am.GetReg(&sb, inst)
-			fmt.Fprintf(&sb, "  mul %s %s %s\n", dest, r1, r2)
-		case ir.Int:
+			fmt.Fprintf(&sb, "  mul %s, %s, %s\n", dest, r1, r2)
+		case ir.I64:
 			dest, _, _ := am.GetReg(&sb, inst)
-			fmt.Fprintf(&sb, "  li %s %d\n", dest, inst.Literal.(int64))
+			fmt.Fprintf(&sb, "  li %s, %d\n", dest, inst.Literal.(int64))
 		default:
 			fmt.Printf("NOT HANDLED IN COMPILE rv64: %s\n", inst.Kind)
 		}

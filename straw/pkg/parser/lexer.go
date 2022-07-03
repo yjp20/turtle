@@ -4,7 +4,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/yjp20/turtle/straw/token"
+	"github.com/yjp20/turtle/straw/pkg/token"
 )
 
 const eof = -1

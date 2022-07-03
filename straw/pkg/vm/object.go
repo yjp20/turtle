@@ -1,10 +1,10 @@
-package interpreter
+package vm
 
 import (
 	"fmt"
 
-	"github.com/yjp20/turtle/straw/ast"
-	"github.com/yjp20/turtle/straw/kind"
+	"github.com/yjp20/turtle/straw/pkg/ast"
+	"github.com/yjp20/turtle/straw/pkg/kind"
 )
 
 type Field struct {
@@ -15,71 +15,71 @@ type Field struct {
 
 type Object interface {
 	Kind() kind.Kind
-	Inspect() string
+	String() string
 }
 
 type Null struct{}
 
 func (n *Null) Kind() kind.Kind { return kind.Null }
-func (n *Null) Inspect() string { return "NULL" }
+func (n *Null) String() string  { return "NULL" }
 
 type Default struct{}
 
 func (d *Default) Kind() kind.Kind { return kind.Default }
-func (d *Default) Inspect() string { return "<default>" }
+func (d *Default) String() string  { return "<default>" }
 
 type I32 struct{ Value int32 }
 
 func (i *I32) Kind() kind.Kind { return kind.I32 }
-func (i *I32) Inspect() string { return fmt.Sprintf("<i32 %d>", i.Value) }
+func (i *I32) String() string  { return fmt.Sprintf("<i32 %d>", i.Value) }
 
 type I64 struct{ Value int64 }
 
 func (i *I64) Kind() kind.Kind { return kind.I64 }
-func (i *I64) Inspect() string { return fmt.Sprintf("<i64 %d>", i.Value) }
+func (i *I64) String() string  { return fmt.Sprintf("<i64 %d>", i.Value) }
 
 type F64 struct{ Value float64 }
 
 func (i *F64) Kind() kind.Kind { return kind.F64 }
-func (i *F64) Inspect() string { return fmt.Sprintf("<f64 %f>", i.Value) }
+func (i *F64) String() string  { return fmt.Sprintf("<f64 %f>", i.Value) }
 
 type Bool struct{ IsTrue bool }
 
 func (b *Bool) Kind() kind.Kind { return kind.Bool }
-func (b *Bool) Inspect() string { return fmt.Sprintf("<bool %t>", b.IsTrue) }
+func (b *Bool) String() string  { return fmt.Sprintf("<bool %t>", b.IsTrue) }
 
 type String struct{ Value string }
 
 func (s *String) Kind() kind.Kind { return kind.String }
-func (s *String) Inspect() string { return fmt.Sprintf("\"%s\"", s.Value) }
+func (s *String) String() string  { return fmt.Sprintf("\"%s\"", s.Value) }
 
 type Function struct {
 	Name  string
 	Args  []Field
 	Body  ast.Statement
-	Frame *FunctionFrame
+	Frame *Frame
 }
 
 func (f *Function) Kind() kind.Kind { return kind.Function }
-func (f *Function) Inspect() string { return fmt.Sprintf("<function '%s'>", f.Name) }
+func (f *Function) String() string  { return fmt.Sprintf("<function '%s'>", f.Name) }
 
 type BuiltinFunction struct {
 	Name string
 }
 
 func (pf *BuiltinFunction) Kind() kind.Kind { return kind.BuiltinFunction }
-func (pf *BuiltinFunction) Inspect() string { return fmt.Sprintf("<builtin function '%s'>", pf.Name) }
+func (pf *BuiltinFunction) String() string  { return fmt.Sprintf("<builtin function '%s'>", pf.Name) }
 
 type Tuple struct {
 	Fields []Field
 }
 
 func (t *Tuple) Kind() kind.Kind { return kind.Tuple }
-func (t *Tuple) Inspect() string {
+func (t *Tuple) String() string {
 	s := "<tuple ("
 	for i, f := range t.Fields {
-		s = s + fmt.Sprintf("%s:%v", f.Name, f.Value.Inspect())
-		if i != len(t.Fields) - 1{
+		s = s + fmt.Sprintf("%s:%v", f.Name, f.Value.String())
+		if i != len(t.Fields)-1 {
 			s = s + ", "
 		}
 	}
@@ -93,7 +93,7 @@ type Type struct {
 }
 
 func (t *Type) Kind() kind.Kind { return kind.Type }
-func (t *Type) Inspect() string {
+func (t *Type) String() string {
 	if t.Spec != nil {
 		// TODO
 		return fmt.Sprintf("<type '%s' of kind '%s'>", t.Name, t.ObjectKind.String())
@@ -108,7 +108,7 @@ type Factory struct {
 }
 
 func (f *Factory) Kind() kind.Kind { return kind.Factory }
-func (f *Factory) Inspect() string { return fmt.Sprintf("<factory of '%T'>", f.ProductKind.String()) }
+func (f *Factory) String() string  { return fmt.Sprintf("<factory of '%T'>", f.ProductKind.String()) }
 
 type Array struct {
 	Objects  []Object
@@ -116,10 +116,10 @@ type Array struct {
 }
 
 func (a *Array) Kind() kind.Kind { return kind.Array }
-func (a *Array) Inspect() string {
+func (a *Array) String() string {
 	s := "<array ["
 	for _, obj := range a.Objects {
-		s += obj.Inspect()
+		s += obj.String()
 	}
 	s += "]>"
 	return s
@@ -131,7 +131,7 @@ type Range struct {
 }
 
 func (r *Range) Kind() kind.Kind { return kind.Range }
-func (r *Range) Inspect() string { return "range" }
+func (r *Range) String() string  { return "range" }
 
 var (
 	NULL  Object = &Null{}

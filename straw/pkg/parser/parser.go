@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/yjp20/turtle/straw/ast"
-	"github.com/yjp20/turtle/straw/token"
+	"github.com/yjp20/turtle/straw/pkg/ast"
+	"github.com/yjp20/turtle/straw/pkg/token"
 )
 
 const NoPos = token.Pos(-1)
@@ -24,9 +24,9 @@ type Parser struct {
 	commentGroup *ast.CommentGroup
 }
 
-func NewParser(file *token.File, errors *token.ErrorList) *Parser {
+func NewParser(lexer *Lexer, errors *token.ErrorList) *Parser {
 	p := &Parser{
-		lexer:  NewLexer(file, errors),
+		lexer:  lexer,
 		errors: errors,
 	}
 	p.next()

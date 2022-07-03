@@ -3,16 +3,11 @@ package ast
 import (
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"strings"
 )
 
-func Print(n Node) {
-	printer(n, "", os.Stdout)
-}
-
-func Sprint(n Node) string {
+func Print(n Node) string {
 	b := &strings.Builder{}
 	printer(n, "", b)
 	return b.String()

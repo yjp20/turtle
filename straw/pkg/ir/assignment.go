@@ -3,7 +3,7 @@ package ir
 import (
 	"fmt"
 
-	"github.com/yjp20/turtle/straw/kind"
+	"github.com/yjp20/turtle/straw/pkg/kind"
 )
 
 type Assignment int

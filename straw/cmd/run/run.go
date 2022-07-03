@@ -4,29 +4,33 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/yjp20/turtle/straw"
-	"github.com/yjp20/turtle/straw/ast"
-	"github.com/yjp20/turtle/straw/interpreter"
-	"github.com/yjp20/turtle/straw/parser"
-	"github.com/yjp20/turtle/straw/token"
+	"github.com/yjp20/turtle/straw/pkg/ast"
+	"github.com/yjp20/turtle/straw/pkg/generator"
+	"github.com/yjp20/turtle/straw/pkg/parser"
+	"github.com/yjp20/turtle/straw/pkg/token"
+	"github.com/yjp20/turtle/straw/pkg/vm"
 )
 
 func main() {
 	bytes, _ := ioutil.ReadAll(os.Stdin)
 
 	errors := token.NewErrorList()
-	file := parser.NewFile(bytes)
-	ps := parser.NewParser(file, &errors)
-	at := ps.ParseProgram()
+
+	file := token.NewFile(bytes)
+	lex := parser.NewLexer(file, &errors)
+	par := parser.NewParser(lex, &errors)
+	gen := generator.NewGenerator(&errors)
+
+	node := par.ParseProgram()
+	code := gen.Generate(node)
+	println(code.String())
 
 	if len(errors) != 0 {
 		errors.Print()
-		ast.Print(at)
+		ast.Print(node)
 		return
 	}
 
-	env := interpreter.NewGlobalFrame(&errors)
-	frame := interpreter.NewFunctionFrame(env)
-	eval := interpreter.Eval(at, frame)
-	println(eval.Inspect())
+	eval := vm.Eval(code, &errors, nil)
+	println(eval.String())
 }
