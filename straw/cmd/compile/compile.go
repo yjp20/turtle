@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/yjp20/turtle/straw/pkg/ast"
-	// "github.com/yjp20/turtle/straw/pkg/compiler"
+	"github.com/yjp20/turtle/straw/pkg/compiler/rv64"
 	"github.com/yjp20/turtle/straw/pkg/generator"
 	"github.com/yjp20/turtle/straw/pkg/parser"
 	"github.com/yjp20/turtle/straw/pkg/token"
@@ -26,5 +26,5 @@ func main() {
 	println(ast.Print(node))
 	println(code.String())
 
-	// os.Stdout.WriteString(compiler.Compile(code))
+	os.Stdout.WriteString(rv64.Compile(code))
 }
