@@ -10,88 +10,117 @@ import (
 )
 
 type Generator struct {
-	insts   []ir.Instruction
-	marks   map[ir.Assignment]string
-	symbols map[string]ir.Assignment
-	errors  *token.ErrorList
+	fns    []*Fn
+	errors *token.ErrorList
+	anonIndex int
 }
 
 func NewGenerator(errors *token.ErrorList) *Generator {
 	return &Generator{
+		errors: errors,
+	}
+}
+
+type Fn struct {
+	name    string
+	insts   []ir.Instruction
+	marks   map[ir.Assignment]string
+	symbols map[string]ir.Assignment
+}
+
+func (g *Generator) anonFnName() string {
+	g.anonIndex += 1
+	return fmt.Sprintf("afunc_%d", g.anonIndex)
+}
+
+func (g *Generator) NewFn(name string) *Fn {
+	fn := &Fn{
+		name:    name,
 		insts:   make([]ir.Instruction, 0),
 		marks:   make(map[ir.Assignment]string),
 		symbols: make(map[string]ir.Assignment),
-		errors:  errors,
 	}
+	g.fns = append(g.fns, fn)
+	return fn
 }
 
 func (g *Generator) Generate(n ast.Node) ir.Program {
-	g.generate(n)
-	program := ir.Program{
-		Blocks: make([]ir.Block, 0),
-		Names:  make(map[string]int),
-	}
-	block := ir.Block{
-		Index:        0,
-		Name:         "start",
-		Instructions: make([]ir.Instruction, 0),
-	}
-	for idx, inst := range g.insts {
-		a := ir.Assignment(idx)
-		if name, ok := g.marks[a]; ok {
-			program.AppendBlock(block)
-			block = ir.Block{
-				Index:        block.Index + 1,
-				Name:         name,
-				Instructions: make([]ir.Instruction, 0),
-			}
+	g.generate(n, g.NewFn("_init"))
+	program := ir.Program{Funcs: make([]ir.Procedure, 0), Names: make(map[string]int)}
+	for _, fn := range g.fns {
+		println(fn.name)
+		procedure := ir.Procedure{
+			Blocks: make([]ir.Block, 0),
+			Names:  make(map[string]int),
+			Name:   fn.name,
 		}
-		block.Instructions = append(block.Instructions, inst)
+		block := ir.Block{
+			Index:        0,
+			Name:         "_start",
+			Offset:       0,
+			Instructions: make([]ir.Instruction, 0),
+		}
+		for idx, inst := range fn.insts {
+			a := ir.Assignment(idx)
+			if name, ok := fn.marks[a]; ok {
+				procedure.AppendBlock(block)
+				block = ir.Block{
+					Index:        block.Index + 1,
+					Name:         name,
+					Offset:       a,
+					Instructions: make([]ir.Instruction, 0),
+				}
+			}
+			block.Instructions = append(block.Instructions, inst)
+		}
+		procedure.AppendBlock(block)
+		program.AppendProcedure(procedure)
 	}
-	program.AppendBlock(block)
 	return program
 }
 
-func (g *Generator) generate(node ast.Node) ir.Assignment {
+func (g *Generator) generate(node ast.Node, fn *Fn) ir.Assignment {
 	var a ir.Assignment
 	switch node := node.(type) {
 	case *ast.Program:
 		for _, stmt := range node.Statements {
-			a = g.generate(stmt)
+			a = g.generate(stmt, fn)
 		}
 	case *ast.Block:
 		for _, stmt := range node.Statements {
-			a = g.generate(stmt)
+			a = g.generate(stmt, fn)
 		}
 
 	case *ast.AssignStatement:
-		leftIdentifier := node.Left.(*ast.Identifier)
-		a = g.generate(node.Right)
-		g.symbols[leftIdentifier.Name] = a
+		switch left := node.Left.(type) {
+		case *ast.Identifier:
+			a = g.generate(node.Right, fn)
+			fn.symbols[left.Name] = a
+		}
 
 	case *ast.ExpressionStatement:
-		a = g.generate(node.Expression)
+		a = g.generate(node.Expression, fn)
 
 	case *ast.MatchExpression:
 		// TODO: FIX
-		ia := g.generate(node.Item)
+		ia := g.generate(node.Item, fn)
 		for i := range node.Bodies {
 			if _, ok := node.Conditions[i].(*ast.DefaultLiteral); !ok {
-				ca := g.generate(node.Conditions[i])
-				g.insertInstruction(ir.Instruction{
+				ca := g.generate(node.Conditions[i], fn)
+				fn.insertInstruction(ir.Instruction{
 					Kind:  ir.NotEquals,
 					Type:  ir.Type{Kind: kind.Bool},
 					Left:  ia,
 					Right: ca,
 				})
-				g.insertInstruction(ir.Instruction{
+				fn.insertInstruction(ir.Instruction{
 					Kind:  ir.IfTrueGoto,
 					Type:  ir.Type{Kind: kind.None},
 					Right: -1,
 				})
 			}
-			ba := g.generate(node.Bodies[i])
-			g.insertInstruction(ir.Instruction{
+			ba := g.generate(node.Bodies[i], fn)
+			fn.insertInstruction(ir.Instruction{
 				Kind:  ir.Move,
 				Left:  a,
 				Right: ba,
@@ -99,36 +128,54 @@ func (g *Generator) generate(node ast.Node) ir.Assignment {
 		}
 
 	case *ast.FunctionDefinition:
-		a = g.insertInstruction(ir.Instruction{
+		name := g.anonFnName()
+		if node.Identifier != nil {
+			name = node.Identifier.Name
+		}
+		a = fn.insertInstruction(ir.Instruction{
 			Kind:    ir.Function,
 			Type:    ir.Type{Kind: kind.Function},
 			Static:  true,
-			Literal: "func_0",
+			Literal: name,
 		})
-		for i, stmt := range node.Args.Statements {
-			asExpr := stmt.(*ast.ExpressionStatement).Expression.(*ast.As)
-			name := asExpr.Value.(*ast.Identifier).Name
-			g.symbols[name] = g.insertInstruction(ir.Instruction{
-				Kind:    ir.Arg,
-				Type:    g.lookupType(asExpr.Type.(*ast.Identifier).Name),
-				Literal: i,
-			})
+		if node.Identifier != nil {
+			fn.symbols[name] = a
 		}
-		g.generate(node.Body)
+		newFn := g.NewFn(name)
+		for idx := len(node.Args.Statements) - 1; idx >= 0; idx-- {
+			stmt := node.Args.Statements[idx]
+			switch stmt := stmt.(type) {
+			case *ast.ExpressionStatement:
+				asExpr := stmt.Expression.(*ast.As)
+				name := asExpr.Value.(*ast.Identifier).Name
+				newFn.symbols[name] = newFn.insertInstruction(ir.Instruction{
+					Kind: ir.Pop,
+					Type: fn.lookupType(asExpr.Type),
+				})
+			default:
+				// TODO
+			}
+		}
+		g.generate(node.Body, newFn)
 
 	case *ast.CallExpression:
 		exprs := make([]ir.Assignment, len(node.Expressions))
 		for i, stmt := range node.Expressions {
-			exprs[i] = g.generate(stmt)
+			exprs[i] = g.generate(stmt, fn)
+			if i > 0 {
+				fn.insertInstruction(ir.Instruction{
+					Kind: ir.Push,
+					Left: exprs[i],
+				})
+			}
 		}
-		g.insertInstruction(ir.Instruction{
-			Kind:  ir.Call,
-			Left:  exprs[0],
-			Extra: exprs[1:],
+		a = fn.insertInstruction(ir.Instruction{
+			Kind: ir.Call,
+			Left: exprs[0],
 		})
 
 	case *ast.TrueLiteral:
-		a = g.insertInstruction(ir.Instruction{
+		a = fn.insertInstruction(ir.Instruction{
 			Type:    ir.Type{Kind: kind.Bool},
 			Static:  true,
 			Kind:    ir.Bool,
@@ -136,7 +183,7 @@ func (g *Generator) generate(node ast.Node) ir.Assignment {
 		})
 
 	case *ast.FalseLiteral:
-		a = g.insertInstruction(ir.Instruction{
+		a = fn.insertInstruction(ir.Instruction{
 			Type:    ir.Type{Kind: kind.Bool},
 			Static:  true,
 			Kind:    ir.Bool,
@@ -144,7 +191,7 @@ func (g *Generator) generate(node ast.Node) ir.Assignment {
 		})
 
 	case *ast.IntLiteral:
-		a = g.insertInstruction(ir.Instruction{
+		a = fn.insertInstruction(ir.Instruction{
 			Type:    ir.Type{Kind: kind.IntConstant},
 			Static:  true,
 			Kind:    ir.I64,
@@ -152,41 +199,47 @@ func (g *Generator) generate(node ast.Node) ir.Assignment {
 		})
 
 	case *ast.Infix:
-		la := g.generate(node.Left)
-		ra := g.generate(node.Right)
+		la := g.generate(node.Left, fn)
+		ra := g.generate(node.Right, fn)
 		switch node.Operator {
 		case token.ADD:
-			a = g.insertInstruction(ir.Instruction{
+			a = fn.insertInstruction(ir.Instruction{
 				Kind:  ir.Add,
 				Left:  la,
 				Right: ra,
 			})
 		case token.SUB:
-			a = g.insertInstruction(ir.Instruction{
+			a = fn.insertInstruction(ir.Instruction{
 				Kind:  ir.Sub,
 				Left:  la,
 				Right: ra,
 			})
 		case token.MUL:
-			a = g.insertInstruction(ir.Instruction{
+			a = fn.insertInstruction(ir.Instruction{
 				Kind:  ir.Mul,
 				Left:  la,
 				Right: ra,
 			})
+		case token.QUO:
+			a = fn.insertInstruction(ir.Instruction{
+				Kind:  ir.Quo,
+				Left:  la,
+				Right: ra,
+			})
 		case token.AND:
-			a = g.insertInstruction(ir.Instruction{
+			a = fn.insertInstruction(ir.Instruction{
 				Kind:  ir.And,
 				Left:  la,
 				Right: ra,
 			})
 		case token.EQUAL:
-			a = g.insertInstruction(ir.Instruction{
+			a = fn.insertInstruction(ir.Instruction{
 				Kind:  ir.Equals,
 				Left:  la,
 				Right: ra,
 			})
 		case token.NOT_EQUAL:
-			a = g.insertInstruction(ir.Instruction{
+			a = fn.insertInstruction(ir.Instruction{
 				Kind:  ir.NotEquals,
 				Left:  la,
 				Right: ra,
@@ -194,48 +247,51 @@ func (g *Generator) generate(node ast.Node) ir.Assignment {
 		}
 
 	case *ast.Prefix:
-		ea := g.generate(node.Expression)
+		ea := g.generate(node.Expression, fn)
 		switch node.Operator {
 		case token.NOT:
-			a = g.insertInstruction(ir.Instruction{
+			a = fn.insertInstruction(ir.Instruction{
 				Kind: ir.Not,
 				Left: ea,
 			})
 		}
 	case *ast.Identifier:
-		a = g.lookupSymbol(node.Name)
+		a = fn.lookupSymbol(node.Name)
 	default:
 		fmt.Printf("NOT GENERATED: %T\n", node)
 	}
 	return a
 }
 
-func (g *Generator) lookupSymbol(name string) ir.Assignment {
-	if a, ok := g.symbols[name]; ok {
+func (fn *Fn) lookupSymbol(name string) ir.Assignment {
+	if a, ok := fn.symbols[name]; ok {
 		return a
 	} else {
 		return -1
 	}
 }
 
-func (g *Generator) lookupType(name string) ir.Type {
-	switch name {
-	case "i64":
-		return ir.Type{Kind: kind.I64}
+func (fn *Fn) lookupType(node ast.Expression) ir.Type {
+	switch node := node.(type) {
+	case *ast.Identifier:
+		switch node.Name {
+		case "i64":
+			return ir.Type{Kind: kind.I64}
+		}
 	}
 	return ir.Type{Kind: kind.Unresolved}
 }
 
-func (g *Generator) unionType(a, b ir.Assignment) {
+func (fn *Fn) unionType(a, b ir.Assignment) {
 
 }
 
-func (g *Generator) insertInstruction(inst ir.Instruction) ir.Assignment {
-	inst.Index = ir.Assignment(len(g.insts))
-	g.insts = append(g.insts, inst)
+func (fn *Fn) insertInstruction(inst ir.Instruction) ir.Assignment {
+	inst.Index = ir.Assignment(len(fn.insts))
+	fn.insts = append(fn.insts, inst)
 	return inst.Index
 }
 
-func (g *Generator) markBlock(a ir.Assignment) {
-
+func (fn *Fn) markBlock(a ir.Assignment, name string) {
+	fn.marks[a] = name
 }

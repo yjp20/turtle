@@ -8,23 +8,23 @@ import (
 //go:generate stringer -type=InstructionKind
 
 type Program struct {
-	Blocks []Block
-	Names  map[string]int
+	Funcs []Procedure
+	Names map[string]int
 }
 
-func (p *Program) AppendBlock(block Block) {
-	p.Blocks = append(p.Blocks, block)
-	p.Names[block.Name] = block.Index
+func (p *Program) AppendProcedure(fn Procedure) {
+	p.Names[fn.Name] = len(p.Funcs)
+	p.Funcs = append(p.Funcs, fn)
 }
 
-func (p Program) Get(idx int) *Block {
-	if idx >= len(p.Blocks) {
+func (p Program) Get(idx int) *Procedure {
+	if idx >= len(p.Funcs) {
 		return nil
 	}
-	return &p.Blocks[idx]
+	return &p.Funcs[idx]
 }
 
-func (p Program) Lookup(name string) *Block {
+func (p Program) Lookup(name string) *Procedure {
 	if idx, ok := p.Names[name]; ok {
 		return p.Get(idx)
 	}
@@ -33,8 +33,43 @@ func (p Program) Lookup(name string) *Block {
 
 func (p Program) String() string {
 	sb := strings.Builder{}
+	for _, procedure := range p.Funcs {
+		sb.WriteString(fmt.Sprintf("%s()\n", procedure.Name))
+		sb.WriteString(procedure.String())
+		sb.WriteRune('\n')
+	}
+	return sb.String()
+}
+
+type Procedure struct {
+	Blocks []Block
+	Name   string
+	Names  map[string]int
+}
+
+func (p *Procedure) AppendBlock(block Block) {
+	p.Blocks = append(p.Blocks, block)
+	p.Names[block.Name] = block.Index
+}
+
+func (p Procedure) Get(idx int) *Block {
+	if idx >= len(p.Blocks) {
+		return nil
+	}
+	return &p.Blocks[idx]
+}
+
+func (p Procedure) Lookup(name string) *Block {
+	if idx, ok := p.Names[name]; ok {
+		return p.Get(idx)
+	}
+	return nil
+}
+
+func (p Procedure) String() string {
+	sb := strings.Builder{}
 	for _, block := range p.Blocks {
-		sb.WriteString(fmt.Sprintf("= %d %s\n", block.Index, block.Name))
+		sb.WriteString(fmt.Sprintf("::%s[%d]\n", block.Name, block.Index))
 		for _, inst := range block.Instructions {
 			sb.WriteString(inst.String())
 			sb.WriteRune('\n')
@@ -43,14 +78,14 @@ func (p Program) String() string {
 	return sb.String()
 }
 
-func (p Program) Next(b *Block) *Block {
+func (p Procedure) Next(b *Block) *Block {
 	return p.Get(b.Index + 1)
 }
-
 
 type Block struct {
 	Index        int
 	Name         string
+	Offset       Assignment
 	Instructions []Instruction
 }
 
@@ -64,7 +99,6 @@ type Instruction struct {
 	Right  Assignment
 
 	Static  bool
-	Extra   []Assignment
 	Literal interface{}
 }
 
@@ -73,31 +107,29 @@ func (i *Instruction) String() string {
 	case Add, Sub, Mul, Quo,
 		Equals, NotEquals, Move, IfTrueGoto,
 		And, Or:
-		return fmt.Sprintf("%s = %s(%s, %s)", i.Index, i.Kind, i.Left, i.Right)
+		return fmt.Sprintf("%4s = %s(%s, %s)", i.Index, i.Kind, i.Left, i.Right)
 
 	case Not:
-		return fmt.Sprintf("%s = %s(%d)", i.Index, i.Kind, i.Left)
+		return fmt.Sprintf("%4s = %s(%s)", i.Index, i.Kind, i.Left)
 
-	case Arg:
-		return fmt.Sprintf("%s = Arg(%d)", i.Index, i.Literal.(int))
+	case Push:
+		return fmt.Sprintf("%4s = Push(%s)", i.Index, i.Left)
+
+	case Pop:
+		return fmt.Sprintf("%4s = Pop()", i.Index)
 
 	case Bool:
-		return fmt.Sprintf("%s = Bool(%t)", i.Index, i.Literal.(bool))
+		return fmt.Sprintf("%4s = Bool(%t)", i.Index, i.Literal.(bool))
 
 	case I64:
-		return fmt.Sprintf("%s = Int(%d)", i.Index, i.Literal.(int64))
+		return fmt.Sprintf("%4s = Int(%d)", i.Index, i.Literal.(int64))
 
 	case Function:
-		return fmt.Sprintf("%s = Function(%s)", i.Index, i.Literal.(string))
+		return fmt.Sprintf("%4s = Function(%s)", i.Index, i.Literal.(string))
 
 	case Call:
 		sb := strings.Builder{}
-		sb.WriteString(fmt.Sprintf("%s = Call(%s", i.Index, i.Left))
-		for _, arg := range i.Extra {
-			sb.WriteString(", ")
-			sb.WriteString(fmt.Sprintf("%s", arg))
-		}
-		sb.WriteString(")")
+		sb.WriteString(fmt.Sprintf("%4s = Call(%s)", i.Index, i.Left))
 		return sb.String()
 
 	default:
@@ -115,6 +147,7 @@ const (
 	Sub
 	Mul
 	Quo
+	Mod
 	Equals
 	NotEquals
 	Move
@@ -137,6 +170,8 @@ const (
 	Phi
 	Ret
 	Function
-	Arg
+
 	Call
+	Push
+	Pop
 )

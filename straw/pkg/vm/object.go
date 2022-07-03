@@ -3,7 +3,6 @@ package vm
 import (
 	"fmt"
 
-	"github.com/yjp20/turtle/straw/pkg/ast"
 	"github.com/yjp20/turtle/straw/pkg/kind"
 )
 
@@ -56,7 +55,6 @@ func (s *String) String() string  { return fmt.Sprintf("\"%s\"", s.Value) }
 type Function struct {
 	Name  string
 	Args  []Field
-	Body  ast.Statement
 	Frame *Frame
 }
 

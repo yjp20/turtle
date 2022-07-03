@@ -6,19 +6,18 @@ import (
 )
 
 type Frame struct {
-	parent *Frame
-	offset ir.Assignment
-	end    ir.Assignment
-	stack  []Object
-	Return Object
+	parent    *Frame
+	offset    ir.Assignment
+	end       ir.Assignment
+	registers []Object
 }
 
 func NewFrame(parent *Frame, offset ir.Assignment, count int) *Frame {
 	return &Frame{
-		parent: parent,
-		offset: offset,
-		end:    offset + ir.Assignment(count),
-		stack:  make([]Object, count),
+		parent:    parent,
+		offset:    offset,
+		end:       offset + ir.Assignment(count),
+		registers: make([]Object, count),
 	}
 }
 
@@ -26,7 +25,7 @@ func (f *Frame) Kind() kind.Kind { return kind.Frame }
 func (f *Frame) Inspect() string { return "<frame>" }
 func (f *Frame) Get(a ir.Assignment) Object {
 	if f.offset <= a && a < f.end {
-		return f.stack[int(a-f.offset)]
+		return f.registers[int(a-f.offset)]
 	}
 	if f.parent != nil {
 		return f.parent.Get(a)
@@ -34,5 +33,7 @@ func (f *Frame) Get(a ir.Assignment) Object {
 	return NULL
 }
 func (f *Frame) Set(a ir.Assignment, obj Object) {
-	f.stack[int(a-f.offset)] = obj
+	if f.offset <= a && a < f.end {
+		f.registers[int(a-f.offset)] = obj
+	}
 }
