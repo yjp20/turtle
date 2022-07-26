@@ -23,18 +23,15 @@ type Instruction struct {
 func (i *Instruction) String() string {
 	switch i.Kind {
 	case Add, Sub, Mul, Quo,
-		Equals, NotEquals, Move, IfTrueGoto,
-		And, Or:
+		Equals, NotEquals, Move,
+		And, Or, Phi:
 		return fmt.Sprintf("%4s = %s(%s, %s)", i.Index, i.Kind, i.Left, i.Right)
 
-	case Not:
+	case Not, Push, Ret, End:
 		return fmt.Sprintf("%4s = %s(%s)", i.Index, i.Kind, i.Left)
 
-	case Push:
-		return fmt.Sprintf("%4s = Push(%s)", i.Index, i.Left)
-
 	case Pop:
-		return fmt.Sprintf("%4s = Pop()", i.Index)
+		return fmt.Sprintf("%4s = %s()", i.Index, i.Kind)
 
 	case Bool:
 		return fmt.Sprintf("%4s = Bool(%t)", i.Index, i.Literal.(bool))
@@ -49,6 +46,12 @@ func (i *Instruction) String() string {
 		sb := strings.Builder{}
 		sb.WriteString(fmt.Sprintf("%4s = Call(%s)", i.Index, i.Left))
 		return sb.String()
+
+	case IfTrueGoto:
+		return fmt.Sprintf("%4s = %s(%s, %s)", i.Index, i.Kind, i.Left, i.Literal)
+
+	case Goto:
+		return fmt.Sprintf("%4s = %s(%s)", i.Index, i.Kind, i.Literal)
 
 	default:
 		return "WTF"
@@ -69,7 +72,6 @@ const (
 	Equals
 	NotEquals
 	Move
-	IfTrueGoto
 	And
 	Or
 
@@ -87,9 +89,17 @@ const (
 	// Extra
 	Phi
 	Ret
+	End
 	Function
 
+	IfTrueGoto
+	Goto
 	Call
 	Push
 	Pop
 )
+
+type PhiLiteral []struct {
+	Block      string
+	Assignment Assignment
+}

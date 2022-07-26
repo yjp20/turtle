@@ -42,4 +42,3 @@ const (
 	Type
 	Factory
 )
-

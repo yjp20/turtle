@@ -18,10 +18,11 @@ func Eval(program ir.Program, errors *token.ErrorList, env *Frame) Object {
 }
 
 type state struct {
-	stack   []Object
+	stack      []Object
 	stackIndex int
-	errors  *token.ErrorList
-	program ir.Program
+	errors     *token.ErrorList
+	program    ir.Program
+	lastBlock  string
 }
 
 func (state *state) push(obj Object) {
@@ -79,9 +80,9 @@ func (state *state) eval(program ir.Program, fn *ir.Procedure, block *ir.Block, 
 
 	res := NULL
 	env := NewFrame(parent, block.Offset, len(block.Instructions))
+	nxt := fn.Next(block)
 
-	for idx, inst := range block.Instructions {
-		idx := ir.Assignment(idx)
+	for _, inst := range block.Instructions {
 		l := env.Get(inst.Left)
 		r := env.Get(inst.Right)
 
@@ -130,23 +131,45 @@ func (state *state) eval(program ir.Program, fn *ir.Procedure, block *ir.Block, 
 		case ir.Pop:
 			res = state.pop()
 
+		case ir.Ret, ir.End:
+			res = l
+
+		case ir.Phi:
+			for _, k := range inst.Literal.(ir.PhiLiteral) {
+				if state.lastBlock == k.Block {
+					res = env.Get(k.Assignment)
+					break
+				}
+			}
+			if res == NULL {
+				// TODO ERROR
+			}
+
 		case ir.Function:
 			res = &Function{Name: inst.Literal.(string), Frame: env}
 
 		case ir.Call:
-			l := l.(*Function)
-			fn := program.Lookup(l.Name)
-			res = state.eval(program, fn, fn.Get(0), l.Frame)
+			if l, ok := l.(*Function); ok {
+				fn := program.Lookup(l.Name)
+				res = state.eval(program, fn, fn.Get(0), l.Frame)
+			}
+
+		case ir.IfTrueGoto:
+			if good, ok := l.(*Bool); ok && good.IsTrue {
+				nxt = fn.Lookup(inst.Literal.(string))
+			}
+
+		case ir.Goto:
+			nxt = fn.Lookup(inst.Literal.(string))
 
 		default:
 			state.appendError(fmt.Sprintf("COULDN'T EVAL: %s\n", inst.String()), 0, 0)
 			res = NULL
 		}
-		// fmt.Printf("%d: %s\n", idx, res.String())
-		env.Set(idx, res)
+		env.Set(inst.Index, res)
 	}
 
-	nxt := fn.Next(block)
+	state.lastBlock = block.Name
 	if nxt != nil {
 		return state.eval(program, fn, nxt, env)
 	}

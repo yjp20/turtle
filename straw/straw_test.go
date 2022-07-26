@@ -72,7 +72,9 @@ func TestStraw(t *testing.T) {
 
 			object := vm.Eval(code, &errors, nil)
 
-			if test.out != object.String() {
+			if object == nil {
+				t.Errorf("expected: %s  got: nil\nCODE\n=====\n%s\nAST\n=====\n%s\nIR\n=====\n%s\n", test.out, test.in, ast.Print(node), code.String())
+			} else if test.out != object.String() {
 				t.Errorf("expected: %s  got: %s\nCODE\n=====\n%s\nAST\n=====\n%s\nIR\n=====\n%s\n", test.out, object.String(), test.in, ast.Print(node), code.String())
 			}
 		})

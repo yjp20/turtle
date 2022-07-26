@@ -29,13 +29,20 @@ type Expression interface {
 // ---
 // General Nodes
 
+// Root of a file's AST
 type Program struct {
 	Statements []Statement
 }
 
 func (p *Program) Pos() token.Pos { return 0 }
-func (p *Program) End() token.Pos { return 0 }
+func (p *Program) End() token.Pos {
+	if len(p.Statements) == 0 {
+		return 0
+	}
+	return p.Statements[len(p.Statements)-1].End()
+}
 
+// Comment in the form of `// .*`
 type Comment struct {
 	TextPos token.Pos
 	Text    string
@@ -44,12 +51,18 @@ type Comment struct {
 func (c *Comment) Pos() token.Pos { return c.TextPos }
 func (c *Comment) End() token.Pos { return c.TextPos + token.Pos(len(c.Text)) }
 
+// Multiple consecutive comments in the form of `// .*`
 type CommentGroup struct {
 	Lines []*Comment
 }
 
 func (cg *CommentGroup) Pos() token.Pos { return cg.Lines[0].Pos() }
-func (cg *CommentGroup) End() token.Pos { return cg.Lines[len(cg.Lines)-1].End() }
+func (cg *CommentGroup) End() token.Pos {
+	if len(cg.Lines) == 0 {
+		return 0
+	}
+	return cg.Lines[len(cg.Lines)-1].End()
+}
 func (cg *CommentGroup) Text() (string, error) {
 	sb := strings.Builder{}
 	// TODO: smarter handling of concatenating comment strings
@@ -65,6 +78,7 @@ func (cg *CommentGroup) Text() (string, error) {
 // ---
 // Statements
 
+// Assignment statement in the form of `(left): (right)`
 type AssignStatement struct {
 	Left  Expression
 	Right Expression
@@ -74,6 +88,7 @@ func (ls *AssignStatement) statementNode() {}
 func (ls *AssignStatement) Pos() token.Pos { return ls.Left.Pos() }
 func (ls *AssignStatement) End() token.Pos { return ls.Right.End() }
 
+// Each statement in the form of `(left) ∈ (right)`
 type EachStatement struct {
 	Left  Expression
 	Right Expression
@@ -83,6 +98,7 @@ func (es *EachStatement) statementNode() {}
 func (es *EachStatement) Pos() token.Pos { return es.Left.Pos() }
 func (es *EachStatement) End() token.Pos { return es.Right.End() }
 
+// Expression statement in the form of `(expression)`
 type ExpressionStatement struct {
 	Expression Expression
 }
@@ -91,6 +107,7 @@ func (es *ExpressionStatement) statementNode() {}
 func (es *ExpressionStatement) Pos() token.Pos { return es.Expression.Pos() }
 func (es *ExpressionStatement) End() token.Pos { return es.Expression.End() }
 
+// Branch statement in the form of ``
 type BranchStatement struct {
 	Keyword    token.Token
 	KeywordPos token.Pos
