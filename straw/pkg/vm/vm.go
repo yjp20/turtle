@@ -13,8 +13,8 @@ func Eval(program ir.Program, errors *token.ErrorList, env *Frame) Object {
 		program: program,
 		errors:  errors,
 	}
-	fn := program.Lookup("_init")
-	return s.eval(program, fn, fn.Get(0), env)
+	proc := program.Lookup("_init")
+	return s.eval(program, proc, proc.Blocks[0], env)
 }
 
 type state struct {
@@ -73,14 +73,14 @@ func (state *state) get(selector string) Object {
 	return NULL
 }
 
-func (state *state) eval(program ir.Program, fn *ir.Procedure, block *ir.Block, parent *Frame) Object {
+func (state *state) eval(program ir.Program, proc *ir.Procedure, block *ir.Block, parent *Frame) Object {
 	if block == nil {
 		return NULL
 	}
 
 	res := NULL
-	env := NewFrame(parent, block.Offset, len(block.Instructions))
-	nxt := fn.Next(block)
+	env := NewFrame(parent, len(block.Instructions))
+	nxt := proc.Next(block)
 
 	for _, inst := range block.Instructions {
 		l := env.Get(inst.Left)
@@ -133,6 +133,8 @@ func (state *state) eval(program ir.Program, fn *ir.Procedure, block *ir.Block, 
 
 		case ir.Ret, ir.End:
 			res = l
+			env.ret = res
+			break
 
 		case ir.Phi:
 			for _, k := range inst.Literal.(ir.PhiLiteral) {
@@ -146,21 +148,22 @@ func (state *state) eval(program ir.Program, fn *ir.Procedure, block *ir.Block, 
 			}
 
 		case ir.Function:
-			res = &Function{Name: inst.Literal.(string), Frame: env}
+			res = &Function{Index: inst.Literal.(int), Frame: env}
 
 		case ir.Call:
 			if l, ok := l.(*Function); ok {
-				fn := program.Lookup(l.Name)
-				res = state.eval(program, fn, fn.Get(0), l.Frame)
+				proc := program.Procedures[l.Index]
+				res = state.eval(program, proc, proc.Blocks[0], l.Frame)
+				l.Frame.ret = nil
 			}
 
 		case ir.IfTrueGoto:
 			if good, ok := l.(*Bool); ok && good.IsTrue {
-				nxt = fn.Lookup(inst.Literal.(string))
+				nxt = proc.Blocks[inst.Literal.(int)]
 			}
 
 		case ir.Goto:
-			nxt = fn.Lookup(inst.Literal.(string))
+			nxt = proc.Blocks[inst.Literal.(int)]
 
 		default:
 			state.appendError(fmt.Sprintf("COULDN'T EVAL: %s\n", inst.String()), 0, 0)
@@ -170,8 +173,15 @@ func (state *state) eval(program ir.Program, fn *ir.Procedure, block *ir.Block, 
 	}
 
 	state.lastBlock = block.Name
+
+	if env.ret != nil && parent != nil {
+		res = env.ret
+		parent.ret = env.ret
+		return res
+	}
+
 	if nxt != nil {
-		return state.eval(program, fn, nxt, env)
+		return state.eval(program, proc, nxt, env)
 	}
 
 	return res

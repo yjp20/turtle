@@ -40,7 +40,7 @@ func (i *Instruction) String() string {
 		return fmt.Sprintf("%4s = Int(%d)", i.Index, i.Literal.(int64))
 
 	case Function:
-		return fmt.Sprintf("%4s = Function(%s)", i.Index, i.Literal.(string))
+		return fmt.Sprintf("%4s = Function(ref: %s)", i.Index, i.Literal.(int))
 
 	case Call:
 		sb := strings.Builder{}

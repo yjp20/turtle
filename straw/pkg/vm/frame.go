@@ -7,25 +7,22 @@ import (
 
 type Frame struct {
 	parent    *Frame
-	offset    ir.Assignment
-	end       ir.Assignment
-	registers []Object
+	registers map[ir.Assignment]Object
+	ret       Object
 }
 
-func NewFrame(parent *Frame, offset ir.Assignment, count int) *Frame {
+func NewFrame(parent *Frame, count int) *Frame {
 	return &Frame{
 		parent:    parent,
-		offset:    offset,
-		end:       offset + ir.Assignment(count),
-		registers: make([]Object, count),
+		registers: make(map[ir.Assignment]Object),
 	}
 }
 
 func (f *Frame) Kind() kind.Kind { return kind.Frame }
 func (f *Frame) Inspect() string { return "<frame>" }
 func (f *Frame) Get(a ir.Assignment) Object {
-	if f.offset <= a && a < f.end {
-		return f.registers[int(a-f.offset)]
+	if val, ok := f.registers[a]; ok {
+		return val
 	}
 	if f.parent != nil {
 		return f.parent.Get(a)
@@ -33,7 +30,5 @@ func (f *Frame) Get(a ir.Assignment) Object {
 	return NULL
 }
 func (f *Frame) Set(a ir.Assignment, obj Object) {
-	if f.offset <= a && a < f.end {
-		f.registers[int(a-f.offset)] = obj
-	}
+	f.registers[a] = obj
 }

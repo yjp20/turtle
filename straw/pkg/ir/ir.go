@@ -6,83 +6,79 @@ import (
 )
 
 type Program struct {
-	Funcs []Procedure
-	Names map[string]int
+	Procedures []*Procedure
+	Names      map[string]int
 }
 
-func (p *Program) AppendProcedure(fn Procedure) {
-	p.Names[fn.Name] = len(p.Funcs)
-	p.Funcs = append(p.Funcs, fn)
-}
-
-func (p Program) Get(idx int) *Procedure {
-	if idx >= len(p.Funcs) {
-		return nil
-	}
-	return &p.Funcs[idx]
+func (p *Program) AppendProcdeure(procedure *Procedure) {
+	procedure.Index = len(p.Procedures)
+	p.Names[procedure.Name] = procedure.Index
+	p.Procedures = append(p.Procedures, procedure)
 }
 
 func (p Program) Lookup(name string) *Procedure {
 	if idx, ok := p.Names[name]; ok {
-		return p.Get(idx)
+		return p.Procedures[idx]
 	}
 	return nil
 }
 
 func (p Program) String() string {
 	sb := strings.Builder{}
-	for _, procedure := range p.Funcs {
-		sb.WriteString(fmt.Sprintf("%s()\n", procedure.Name))
-		sb.WriteString(procedure.String())
-		sb.WriteRune('\n')
+	for _, p := range p.Procedures {
+		sb.WriteString(p.String())
 	}
 	return sb.String()
 }
 
 type Procedure struct {
-	Blocks []Block
+	Index  int
 	Name   string
+	Blocks []*Block
 	Names  map[string]int
 }
 
-func (p *Procedure) AppendBlock(block Block) {
-	p.Blocks = append(p.Blocks, block)
+func (p *Procedure) AppendBlock(block *Block) {
+	block.Index = len(p.Blocks)
 	p.Names[block.Name] = block.Index
+	p.Blocks = append(p.Blocks, block)
 }
 
-func (p Procedure) Get(idx int) *Block {
-	if idx >= len(p.Blocks) {
+func (p Procedure) Next(block *Block) *Block {
+	if block.Index+1 == len(p.Blocks) {
 		return nil
 	}
-	return &p.Blocks[idx]
-}
-
-func (p Procedure) Lookup(name string) *Block {
-	if idx, ok := p.Names[name]; ok {
-		return p.Get(idx)
-	}
-	return nil
+	return p.Blocks[block.Index+1]
 }
 
 func (p Procedure) String() string {
-	sb := strings.Builder{}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("[%s()] %d\n", p.Name, p.Index))
 	for _, block := range p.Blocks {
-		sb.WriteString(fmt.Sprintf("::%s[%d]\n", block.Name, block.Index))
-		for _, inst := range block.Instructions {
-			sb.WriteString(inst.String())
-			sb.WriteRune('\n')
-		}
+		sb.WriteString(block.String())
 	}
+	sb.WriteRune('\n')
 	return sb.String()
-}
-
-func (p Procedure) Next(b *Block) *Block {
-	return p.Get(b.Index + 1)
 }
 
 type Block struct {
 	Index        int
 	Name         string
-	Offset       Assignment
-	Instructions []Instruction
+	Instructions []*Instruction
+	Map          map[Assignment]int
+	Symbols      map[string]Assignment
+}
+
+func (b Block) String() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("(%s) %d\n", b.Name, b.Index))
+	for _, inst := range b.Instructions {
+		sb.WriteString(inst.String())
+		sb.WriteRune('\n')
+	}
+	return sb.String()
+}
+
+func (b Block) Get(a Assignment) *Instruction {
+	return b.Instructions[b.Map[a]]
 }

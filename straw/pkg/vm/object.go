@@ -54,6 +54,7 @@ func (s *String) String() string  { return fmt.Sprintf("\"%s\"", s.Value) }
 
 type Function struct {
 	Name  string
+	Index int
 	Args  []Field
 	Frame *Frame
 }
