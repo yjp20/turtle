@@ -254,6 +254,7 @@ func (fl *FalseLiteral) End() token.Pos { return fl.LiteralPos + 5 }
 
 type ProcedureType struct {
 	KeywordPos token.Pos
+	Name       *Identifier
 	Params     []Field
 	Arguments  []Field
 	ReturnType Node
@@ -263,7 +264,7 @@ func (ft *ProcedureType) Pos() token.Pos { return ft.KeywordPos }
 func (ft *ProcedureType) End() token.Pos { return -1 }
 
 type ProcedureDefinition struct {
-	ProcedureType Node
+	ProcedureType *ProcedureType
 	KeywordPos    token.Pos
 	Body          Node
 }

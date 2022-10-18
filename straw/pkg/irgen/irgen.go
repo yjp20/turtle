@@ -18,7 +18,7 @@ type Generator struct {
 
 func NewGenerator(errors *token.ErrorList) *Generator {
 	return &Generator{
-		counter: 0,
+		counter: 1,
 		program: ir.Program{Procedures: make([]*ir.Proc, 0), Names: make(map[string]int)},
 		errors:  errors,
 	}
@@ -55,11 +55,41 @@ func (g *Generator) GenerateBlock(name string, procedure *ir.Proc, predecesors [
 
 func (g *Generator) Generate(n ast.Node) ir.Program {
 	g.generate(n, g.NewProcedure("_init"), nil)
+
+	// Post-process outputted ir programs
+	indexMap := map[ir.Assignment]ir.Assignment{}
+	ct := ir.Assignment(1)
 	for _, proc := range g.program.Procedures {
 		for _, block := range proc.Blocks {
+			// First, move phi nodes to the start of each block
 			sort.SliceStable(block.Instructions, func(a, b int) bool {
 				return block.Instructions[a].Kind == ir.Phi
 			})
+			// Second, relabel each node to linearize instructions
+			for _, inst := range block.Instructions {
+				indexMap[inst.Index] = ct
+				ct += 1
+			}
+		}
+	}
+
+	// Apply relabel of nodes
+	for _, proc := range g.program.Procedures {
+		for _, block := range proc.Blocks {
+			for _, inst := range block.Instructions {
+				inst.Index = indexMap[inst.Index]
+				if inst.Left != 0 {
+					inst.Left = indexMap[inst.Left]
+				}
+				if inst.Right != 0 {
+					inst.Right = indexMap[inst.Right]
+				}
+				if inst.Kind == ir.Phi {
+					for i := range inst.Literal.([]ir.PhiLiteral) {
+						inst.Literal.([]ir.PhiLiteral)[i].Assignment = indexMap[inst.Literal.([]ir.PhiLiteral)[i].Assignment]
+					}
+				}
+			}
 		}
 	}
 
@@ -287,9 +317,9 @@ func (g *Generator) generate(node ast.Node, procedure *ir.Proc, block *ir.Block)
 		blocks := make([]*ir.Block, len(node.Tuple.Nodes))
 		phi := make([]ir.PhiLiteral, 0)
 		for idx := range node.Tuple.Nodes {
-			blocks[idx] = g.NewBlock(fmt.Sprintf("match_%d", idx), procedure, make([]*ir.Block, 0), true)
+			blocks[idx] = g.NewBlock(fmt.Sprintf("match_%d", idx), procedure, []*ir.Block{block}, true)
 		}
-		blockNext := g.NewBlock("match_next", procedure, make([]*ir.Block, 0), true)
+		blockNext := g.NewBlock("match_next", procedure, []*ir.Block{block}, true)
 
 		for idx, n := range node.Tuple.Nodes {
 			if n, ok := n.(*ast.Assign); ok {
@@ -353,7 +383,12 @@ func (g *Generator) generate(node ast.Node, procedure *ir.Proc, block *ir.Block)
 			Literal: newProcedure.Index,
 		})
 
-		for _, arg := range node.ProcedureType.(*ast.ProcedureType).Arguments {
+		if node.ProcedureType.Name != nil {
+			block.Symbols[node.ProcedureType.Name.Value] = a
+			newBlock.Symbols[node.ProcedureType.Name.Value] = a
+		}
+
+		for _, arg := range node.ProcedureType.Arguments {
 			var t ir.Assignment
 			t, newBlock = g.generate(arg.Type, newProcedure, newBlock)
 			newBlock.Symbols[arg.Name] = g.insertInstruction(newBlock, ir.Inst{

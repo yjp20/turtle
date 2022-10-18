@@ -346,6 +346,9 @@ func (p *Parser) consumeProcedure() ast.Node {
 	pos := p.consume(token.FUNC)
 	pt := &ast.ProcedureType{KeywordPos: pos}
 	node = pt
+	if p.tok == token.IDENT {
+		pt.Name = p.tryConsumeIdentifier()
+	}
 	if p.tok == token.LEFT_BRACK {
 		bt := p.consumeBrackTuple()
 		pt.Params = toFields(bt)
