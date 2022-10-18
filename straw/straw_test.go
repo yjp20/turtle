@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/yjp20/turtle/straw/pkg/ast"
-	"github.com/yjp20/turtle/straw/pkg/vm"
-	"github.com/yjp20/turtle/straw/pkg/parser"
-	"github.com/yjp20/turtle/straw/pkg/generator"
+	"github.com/yjp20/turtle/straw/pkg/astgen"
+	"github.com/yjp20/turtle/straw/pkg/irgen"
 	"github.com/yjp20/turtle/straw/pkg/token"
+	"github.com/yjp20/turtle/straw/pkg/vm"
 )
 
 type Test struct {
@@ -39,9 +39,9 @@ func TestStraw(t *testing.T) {
 		}
 		lines := strings.Split(string(b), "\n")
 		tests = append(tests, Test{
-			name: entry.Name(),
-			in: b,
-			out: lines[len(lines) - 2][2:],
+			name:        entry.Name(),
+			in:          b,
+			out:         lines[len(lines)-2][2:],
 			shouldError: false,
 		})
 	}
@@ -51,12 +51,15 @@ func TestStraw(t *testing.T) {
 			errors := token.NewErrorList()
 
 			file := token.NewFile([]byte(test.in))
-			lex := parser.NewLexer(file, &errors)
-			par := parser.NewParser(lex, &errors)
-			gen := generator.NewGenerator(&errors)
+			lex := astgen.NewLexer(file, &errors)
+			par := astgen.NewParser(lex, &errors)
+			gen := irgen.NewGenerator(&errors)
 
+			t.Log(string(test.in))
 			node := par.ParseProgram()
+			t.Log(ast.Print(node))
 			code := gen.Generate(node)
+			t.Log(code.String())
 
 			if len(errors) != 0 && !test.shouldError {
 				t.Errorf("didn't expect to error")
@@ -70,12 +73,13 @@ func TestStraw(t *testing.T) {
 				return
 			}
 
-			object := vm.Eval(code, &errors, nil)
+			frame := vm.NewFrame(nil)
+			object := vm.Eval(code, &errors, frame)
 
 			if object == nil {
-				t.Errorf("expected: %s  got: nil\nCODE\n=====\n%s\nAST\n=====\n%s\nIR\n=====\n%s\n", test.out, test.in, ast.Print(node), code.String())
+				t.Errorf("expected: %s  got: nil\n", test.out)
 			} else if test.out != object.String() {
-				t.Errorf("expected: %s  got: %s\nCODE\n=====\n%s\nAST\n=====\n%s\nIR\n=====\n%s\n", test.out, object.String(), test.in, ast.Print(node), code.String())
+				t.Errorf("expected: %s  got: %s\n", test.out, object.String())
 			}
 		})
 	}

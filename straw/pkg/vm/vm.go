@@ -14,7 +14,7 @@ func Eval(program ir.Program, errors *token.ErrorList, env *Frame) Object {
 		errors:  errors,
 	}
 	proc := program.Lookup("_init")
-	return s.eval(program, proc, proc.Blocks[0], env)
+	return s.eval(program, proc, env)
 }
 
 type state struct {
@@ -22,7 +22,6 @@ type state struct {
 	stackIndex int
 	errors     *token.ErrorList
 	program    ir.Program
-	lastBlock  string
 }
 
 func (state *state) push(obj Object) {
@@ -73,118 +72,156 @@ func (state *state) get(selector string) Object {
 	return NULL
 }
 
-func (state *state) eval(program ir.Program, proc *ir.Procedure, block *ir.Block, parent *Frame) Object {
-	if block == nil {
-		return NULL
-	}
+func (state *state) eval(program ir.Program, proc *ir.Proc, env *Frame) Object {
+	var (
+		lastBlock = 0
+		block     = proc.Blocks[0]
+		res       = NULL
+	)
 
-	res := NULL
-	env := NewFrame(parent, len(block.Instructions))
-	nxt := proc.Next(block)
+	for block != nil {
+		for _, inst := range block.Instructions {
+			l := env.Get(inst.Left)
+			r := env.Get(inst.Right)
+			switch inst.Kind {
+			case ir.I64:
+				res = &I64{inst.Literal.(int64)}
+			case ir.Bool:
+				res = &Bool{inst.Literal.(bool)}
+			case ir.Default:
+				res = &Default{}
 
-	for _, inst := range block.Instructions {
-		l := env.Get(inst.Left)
-		r := env.Get(inst.Right)
+			case ir.Not:
+				l := l.(*Bool)
+				res = &Bool{!l.IsTrue}
 
-		switch inst.Kind {
-		case ir.I64:
-			res = &I64{inst.Literal.(int64)}
-		case ir.Bool:
-			res = &Bool{inst.Literal.(bool)}
-
-		case ir.Not:
-			l := l.(*Bool)
-			res = &Bool{!l.IsTrue}
-
-		case ir.Quo:
-			switch l := l.(type) {
-			case *I64:
-				res = &I64{l.Value / r.(*I64).Value}
-			}
-		case ir.Mod:
-			switch l := l.(type) {
-			case *I64:
-				res = &I64{l.Value % r.(*I64).Value}
-			}
-		case ir.Mul:
-			switch l := l.(type) {
-			case *I64:
-				res = &I64{l.Value * r.(*I64).Value}
-			}
-		case ir.Add:
-			switch l := l.(type) {
-			case *I64:
-				res = &I64{l.Value + r.(*I64).Value}
-			}
-		case ir.Equals:
-			res = &Bool{l.String() == r.String()}
-		case ir.NotEquals:
-			res = &Bool{l.String() != r.String()}
-		case ir.And:
-			l := l.(*Bool)
-			r := r.(*Bool)
-			res = &Bool{l.IsTrue && r.IsTrue}
-
-		case ir.Push:
-			state.push(l)
-
-		case ir.Pop:
-			res = state.pop()
-
-		case ir.Ret, ir.End:
-			res = l
-			env.ret = res
-			break
-
-		case ir.Phi:
-			for _, k := range inst.Literal.(ir.PhiLiteral) {
-				if state.lastBlock == k.Block {
-					res = env.Get(k.Assignment)
-					break
+			case ir.Quo:
+				switch l := l.(type) {
+				case *I64:
+					res = &I64{l.Value / r.(*I64).Value}
 				}
+			case ir.Mod:
+				switch l := l.(type) {
+				case *I64:
+					res = &I64{l.Value % r.(*I64).Value}
+				}
+			case ir.Mul:
+				switch l := l.(type) {
+				case *I64:
+					res = &I64{l.Value * r.(*I64).Value}
+				}
+			case ir.Add:
+				switch l := l.(type) {
+				case *I64:
+					res = &I64{l.Value + r.(*I64).Value}
+				}
+			case ir.Sub:
+				switch l := l.(type) {
+				case *I64:
+					res = &I64{l.Value - r.(*I64).Value}
+				}
+			case ir.Equals:
+				if l.Kind() == kind.Default || r.Kind() == kind.Default {
+					res = &Bool{true}
+				} else {
+					res = &Bool{l.String() == r.String()}
+				}
+			case ir.NotEquals:
+				res = &Bool{l.String() != r.String()}
+			case ir.Less:
+				if l, ok := l.(*I64); ok {
+					if r, ok := r.(*I64); ok {
+						res = &Bool{l.Value < r.Value}
+					}
+				} else {
+					res = &Bool{l.String() < r.String()}
+				}
+			case ir.And:
+				l := l.(*Bool)
+				r := r.(*Bool)
+				res = &Bool{l.IsTrue && r.IsTrue}
+			case ir.ConstructTuple:
+				args := make([]Field, 0)
+				for _, arg := range inst.Literal.([]ir.Field) {
+					args = append(args, Field{
+						Name:  arg.Name,
+						Value: env.Get(arg.Value),
+					})
+				}
+				res = &Tuple{args}
+
+			case ir.ProcedureType:
+				// l := l.(*Tuple)
+				r := r.(*Tuple)
+				_ = env.Get(inst.Literal.(ir.Assignment))
+				res = &Procedure{Name: "fibo", Args: r.Fields}
+			case ir.LoadEnv:
+				proctype := env.Get(inst.Literal.(ir.Assignment)).(*Procedure)
+				for i := len(proctype.Args) - 1; i >= 0; i-- {
+					env.SetVar(proctype.Args[i].Name, state.pop())
+				}
+				env.SetVar(proctype.Name, proctype)
+			case ir.Env:
+				res = env.GetVar(inst.Literal.(string))
+			case ir.Push:
+				state.push(l)
+			case ir.Pop:
+				res = state.pop()
+
+			case ir.Ret, ir.End:
+				res = l
+				return res
+
+			case ir.Phi:
+				for _, k := range inst.Literal.([]ir.PhiLiteral) {
+					if lastBlock == k.BlockIndex {
+						res = env.Get(k.Assignment)
+						break
+					}
+				}
+				if res == NULL {
+					// TODO ERROR
+				}
+
+			case ir.ProcedureDefinition:
+				res = &Procedure{Index: inst.Literal.(int), Frame: env}
+
+			case ir.Call:
+				if l, ok := l.(*Procedure); ok {
+					proc := program.Procedures[l.Index]
+					newEnv := NewFrame(env)
+					for _, field := range l.Args {
+						newEnv.SetVar(field.Name, field.Value)
+					}
+					res = state.eval(program, proc, newEnv)
+				}
+
+			case ir.GotoIf:
+				if good, ok := l.(*Bool); ok && good.IsTrue {
+					lastBlock = block.Index
+					block = proc.Blocks[inst.Literal.(int)]
+					goto block_loop
+				}
+
+			case ir.Goto:
+				lastBlock = block.Index
+				block = proc.Blocks[inst.Literal.(int)]
+				goto block_loop
+
+			default:
+				state.appendError(fmt.Sprintf("COULDN'T EVAL: %s\n", inst.String()), 0, 0)
+				res = NULL
 			}
-			if res == NULL {
-				// TODO ERROR
+			if res != nil {
+				fmt.Printf("%s = %s\n", inst.Index, res.String())
 			}
-
-		case ir.Function:
-			res = &Function{Index: inst.Literal.(int), Frame: env}
-
-		case ir.Call:
-			if l, ok := l.(*Function); ok {
-				proc := program.Procedures[l.Index]
-				res = state.eval(program, proc, proc.Blocks[0], l.Frame)
-				l.Frame.ret = nil
-			}
-
-		case ir.IfTrueGoto:
-			if good, ok := l.(*Bool); ok && good.IsTrue {
-				nxt = proc.Blocks[inst.Literal.(int)]
-			}
-
-		case ir.Goto:
-			nxt = proc.Blocks[inst.Literal.(int)]
-
-		default:
-			state.appendError(fmt.Sprintf("COULDN'T EVAL: %s\n", inst.String()), 0, 0)
-			res = NULL
+			env.Set(inst.Index, res)
 		}
-		env.Set(inst.Index, res)
+		lastBlock = block.Index
+		block = proc.Next(block)
+	block_loop:
 	}
-
-	state.lastBlock = block.Name
-
-	if env.ret != nil && parent != nil {
-		res = env.ret
-		parent.ret = env.ret
-		return res
-	}
-
-	if nxt != nil {
-		return state.eval(program, proc, nxt, env)
-	}
-
-	return res
+	return NULL
 }
 
 func (state *state) appendError(msg string, pos token.Pos, end token.Pos) {

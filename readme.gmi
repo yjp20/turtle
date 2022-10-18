@@ -58,64 +58,81 @@ For example when you look at something like Go, the design is so simple and clea
 
 Each of these reasons is enough for me to at least try creating a programming language and operating system, but with all of these desires in conjuction, I have never been more sure that this is a project that I will either see through or die trying. I'm pretty sure it will take around 10 years to get anywhere close to the point I want to get to. Most likely, it will be more. That's fine.
 
-## os references
+# os references
 
-### linux
+## linux
 
 Linux is a tried and true monolithic kernel with a ton of features. I don't have much to say about linux as a whole, because it's the standard and by definition doesn't have many exceptional, non-standard features.
 
-### bsd/openbsd
+## bsd/openbsd
 
 Personally, I like OpenBSD and the BSD flavors of unix in general. For Linux, my favorite distribution is Void Linux by a wide margin, which was created by a BSD contributor and shares a lot of the BSD ethos. What I like about them is their commitment to an integrated system and quality of simple and effective code. Ultimately it shows that to upkeep maintainable code over a long period of time, there is a need to actively limit feature creep.
 
 OpenBSD's main focus is specifically on security. As much as I would like to emulate their approach, I think security is one of those things that takes second footing to an actually operating operating system. Essentially, I will worry about it later.
 
-### plan9
+## plan9
 
 plan9's main innovation deals with extending unix's file abstraction to practically everything. A similar feature will probably be implemented into turtle. Besides that, there are a whole lot of things taken from plan9 directly and indirectly, so much so that it will be impractical to detail all of them. Some examples include CSP, the plan9 ABI (used in Go), etc.
 
-### serenity
+## serenity
 
 Andreas Kling, the creator of serenity used to work in the Apple ecosystem The main thing about serenity that I find attractive is it's centralized development which enables extremely fast iteration and its GUI that's consistent throughout the entire system. It's not experimental with the various abstractions by design and tries to implement a sane version of the most common, but not necessarily the best abstractions throughout computing history.
 
-### hubris
+## hubris
 
 Hubris is interesting in the sense that it is statically configured and made in Rust. Not too familiar with it, but being statically configured is an interesting concept for an operating system. It's definitely makes sense for embedded applications for pretty clear reasons, but also might be interesting to use within virtualized contexts since static and ultimately repeatable configurations is what docker tries to achieve.
 
-### redox
+## redox
 
 Redox extends plan9's everything is a file concept to everything is a url. This solves the problem of file specification, where the data format of various different files are unclear. turtle's approach to this problem is a bit different, to the point where the url concept likely won't apply.
 
-## language references
+# language references
 
-### c
+## c
 
-### zig
+C is nice because the language is so close to the processor. On many architectures, C can be translated almost directly to the actual instructions.
 
-Zig's most interesting feature is its metaprogramming capabilities. comptime represents a few different "kinds" of metaprogramming that can be achieved, such as conditional compilation, generics, and zero-cost abstractions. The "problem" for me is that grouping these metaprogramming faciltiies under one semantic term makes conceptual sense, but less practical sense. I think this may be a case of over-abstraction, and I'm currently experimenting with the concept of factory types, which can configure code and types. For now, the main motivating example is static configuration for speed, but I'm interested to see what the implications of being able to dynamically configure at runtime.
+The problem with C is that everything about the language is essentially just hacks on top of other 
 
-### rust
+## zig
 
-### vlang
+Zig's most interesting feature is its metaprogramming capabilities. comptime represents a few different "kinds" of metaprogramming that can be achieved, such as conditional compilation, generics, and zero-cost abstractions. The "problem" for me is that grouping these metaprogramming faciltiies under one semantic term makes conceptual sense, but less practical sense. I think this may be a case of over-abstraction, although i've yet to see if I can come up with something better.
 
-### go
+Such powerful metaprogramming abilities comes with some drawbacks, such as a reduction in static analysis, increased complexity in implementation as a custom interpreter is needed.
 
-### haskell
+For now, the main motivating example is static configuration for speed, but I'm interested to see what the implications of being able to dynamically configure at runtime for certain tasks.
 
-### apl
+## rust
 
-### rc
+## vlang
 
-### limbo
+## go
 
-### spiral language
+## haskell
 
-### red/rebol
+## apl
 
-### jai
+## rc
 
-## serialization formats
+## limbo
 
-### amazon ion
+## spiral language
 
-### protobuf
+## red/rebol
+
+Red, like straw, is meant to be a full-stack language. Its original plans were to have a "collaborative execution model" that would interop code in interpreted, aot-compiled, and jit-compiled modes. Red would run most code in the slower interpreted mode, but give you the option of writing critcal sections in Red/System which should be considerably faster and comparable to C.
+
+Red also doesn't settle for C-like syntax. The code is homeoiconic, which is an idea of lispy origins where code is data, and data is code. Essentially, the code is just a nested list of symbols which is given life by the compiler, but can also serve as a data-format by itself.
+
+Being such a deeply abitious language, 
+
+## jai
+
+## lua
+
+
+# serialization formats
+
+## amazon ion
+
+## protobuf

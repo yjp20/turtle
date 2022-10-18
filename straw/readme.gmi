@@ -1,0 +1,24 @@
+# straw programming language
+
+## goals
+
+The goals in order of importance:
+
+- swiss knife
+- simplcity
+- convention over configuration
+- performant
+
+First and foremost, straw is an experiment to see if it is possible to create one language that legitmately does it all, low-level systems programming, high-level application programming, and shell scripting. All programs should be libraries, and all libraries should be loadable as programs through the shell.
+
+While accomplishing the first goal, I aim to make things as simple as possible. Not much to be said here, since it's an obvious but also obviously important.
+
+The design of the language should afford the user to write code in predefined ways, without having to fight the syntax or the compiler for dominance. Key functions, data structures, and common interfaces should be provided by the langauge where ever possible. Like Go, I aim to have a large but high quality library, unlike C++ which has a large but abysmal standard library.
+
+The meta programming features should afford writing high performance code with zero cost abstractions. However, I'm not sure how SIMD instructions should be handled at this point, or how gpu programming which is abundantly important is supposed to be done well.
+
+## syntax design
+
+- Extensive use of unicode characters (experimental)
+- Blocks as values
+- Ubiquitous tuples

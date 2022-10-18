@@ -52,15 +52,15 @@ type String struct{ Value string }
 func (s *String) Kind() kind.Kind { return kind.String }
 func (s *String) String() string  { return fmt.Sprintf("\"%s\"", s.Value) }
 
-type Function struct {
+type Procedure struct {
 	Name  string
 	Index int
 	Args  []Field
 	Frame *Frame
 }
 
-func (f *Function) Kind() kind.Kind { return kind.Function }
-func (f *Function) String() string  { return fmt.Sprintf("<function '%s'>", f.Name) }
+func (f *Procedure) Kind() kind.Kind { return kind.Function }
+func (f *Procedure) String() string  { return fmt.Sprintf("<function '%s'>", f.Name) }
 
 type BuiltinFunction struct {
 	Name string

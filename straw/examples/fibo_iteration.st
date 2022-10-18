@@ -1,10 +1,13 @@
 fibo: λ (n i64) → {
-	n = 0 ⇒ return 0
-	(a,b): (0,1)
-	∀ i ∈ range[1‥n) → {
-		(a,b): (b,a+b)
+	n = 0 ⇒ return 0 ~ 0
+	a: 0
+	b: 1
+	∀ i ∈ range[0‥n) → {
+		t: a+b
+		a: b
+		b: t
 	}
-	return b
+	return a
 }
 .fibo 20
 # <i64 6765>

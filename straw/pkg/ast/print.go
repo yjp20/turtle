@@ -5,6 +5,8 @@ import (
 	"io"
 	"reflect"
 	"strings"
+
+	"github.com/yjp20/turtle/straw/pkg/token"
 )
 
 func Print(n Node) string {
@@ -31,7 +33,13 @@ func printer(n Node, indent string, w io.Writer) {
 		if f.Type.Kind() == reflect.Slice {
 			for j := 0; j < fv.Len(); j++ {
 				fmt.Fprintf(w, "%s| %s[%d]: ", indent, f.Name, j)
-				printer(fv.Index(j).Interface().(Node), indent+"| ", w)
+				switch n := fv.Index(j).Interface().(type) {
+				case Node:
+					printer(n, indent+"| ", w)
+				case Field:
+					// TODO
+					fmt.Fprintf(w, "\n")
+				}
 			}
 		} else if fv.Type().Implements(NODE) {
 			fmt.Fprintf(w, "%s| %s: ", indent, f.Name)
@@ -42,6 +50,8 @@ func printer(n Node, indent string, w io.Writer) {
 			}
 		} else {
 			switch e := fv.Interface().(type) {
+			case token.Token:
+				fmt.Fprintf(w, "%s| %s: %s\n", indent, f.Name, e)
 			case string:
 				fmt.Fprintf(w, "%s| %s: %s\n", indent, f.Name, e)
 			case int64:

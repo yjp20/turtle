@@ -8,13 +8,14 @@ import (
 type Frame struct {
 	parent    *Frame
 	registers map[ir.Assignment]Object
-	ret       Object
+	variables map[string]Object
 }
 
-func NewFrame(parent *Frame, count int) *Frame {
+func NewFrame(parent *Frame) *Frame {
 	return &Frame{
 		parent:    parent,
 		registers: make(map[ir.Assignment]Object),
+		variables: make(map[string]Object),
 	}
 }
 
@@ -31,4 +32,10 @@ func (f *Frame) Get(a ir.Assignment) Object {
 }
 func (f *Frame) Set(a ir.Assignment, obj Object) {
 	f.registers[a] = obj
+}
+func (f *Frame) GetVar(name string) Object {
+	return f.variables[name]
+}
+func (f *Frame) SetVar(name string, obj Object) {
+	f.variables[name] = obj
 }

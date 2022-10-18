@@ -14,36 +14,43 @@ func _() {
 	_ = x[Mul-3]
 	_ = x[Quo-4]
 	_ = x[Mod-5]
-	_ = x[Equals-6]
-	_ = x[NotEquals-7]
-	_ = x[Move-8]
-	_ = x[And-9]
-	_ = x[Or-10]
-	_ = x[Not-11]
-	_ = x[Bool-12]
-	_ = x[I8-13]
-	_ = x[I16-14]
-	_ = x[I32-15]
-	_ = x[I64-16]
-	_ = x[F32-17]
-	_ = x[F64-18]
-	_ = x[Phi-19]
-	_ = x[Ret-20]
-	_ = x[End-21]
-	_ = x[Function-22]
-	_ = x[IfTrueGoto-23]
-	_ = x[Goto-24]
-	_ = x[Call-25]
-	_ = x[Push-26]
-	_ = x[Pop-27]
+	_ = x[Less-6]
+	_ = x[Greater-7]
+	_ = x[Equals-8]
+	_ = x[NotEquals-9]
+	_ = x[Move-10]
+	_ = x[And-11]
+	_ = x[Or-12]
+	_ = x[Not-13]
+	_ = x[Default-14]
+	_ = x[Bool-15]
+	_ = x[I8-16]
+	_ = x[I16-17]
+	_ = x[I32-18]
+	_ = x[I64-19]
+	_ = x[F32-20]
+	_ = x[F64-21]
+	_ = x[ProcedureType-22]
+	_ = x[ProcedureDefinition-23]
+	_ = x[ConstructTuple-24]
+	_ = x[LoadEnv-25]
+	_ = x[Env-26]
+	_ = x[Phi-27]
+	_ = x[Ret-28]
+	_ = x[End-29]
+	_ = x[GotoIf-30]
+	_ = x[Goto-31]
+	_ = x[Call-32]
+	_ = x[Push-33]
+	_ = x[Pop-34]
 }
 
-const _InstructionKind_name = "UndefinedAddSubMulQuoModEqualsNotEqualsMoveAndOrNotBoolI8I16I32I64F32F64PhiRetEndFunctionIfTrueGotoGotoCallPushPop"
+const _InstructionKind_name = "UndefinedAddSubMulQuoModLessGreaterEqualsNotEqualsMoveAndOrNotDefaultBoolI8I16I32I64F32F64ProcedureTypeProcedureDefinitionConstructTupleLoadEnvEnvPhiRetEndGotoIfGotoCallPushPop"
 
-var _InstructionKind_index = [...]uint8{0, 9, 12, 15, 18, 21, 24, 30, 39, 43, 46, 48, 51, 55, 57, 60, 63, 66, 69, 72, 75, 78, 81, 89, 99, 103, 107, 111, 114}
+var _InstructionKind_index = [...]uint8{0, 9, 12, 15, 18, 21, 24, 28, 35, 41, 50, 54, 57, 59, 62, 69, 73, 75, 78, 81, 84, 87, 90, 103, 122, 136, 143, 146, 149, 152, 155, 161, 165, 169, 173, 176}
 
-func (i InstructionKind) String() string {
-	if i < 0 || i >= InstructionKind(len(_InstructionKind_index)-1) {
+func (i InstKind) String() string {
+	if i < 0 || i >= InstKind(len(_InstructionKind_index)-1) {
 		return "InstructionKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _InstructionKind_name[_InstructionKind_index[i]:_InstructionKind_index[i+1]]
